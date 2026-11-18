@@ -30,7 +30,7 @@ jobs:
       run:
         working-directory: services/${{ matrix.service }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v5
         with:
@@ -62,7 +62,7 @@ jobs:
           - { name: shop-pos-angular,  context: frontends/shop-pos-angular }
           - { name: backoffice-react,  context: frontends/backoffice-react }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v3
       - name: Build image (no push)
         uses: docker/build-push-action@v6
@@ -76,7 +76,7 @@ jobs:
     name: Validate compose files
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: cp .env.example .env
       - run: docker compose -f docker-compose.yml config -q
       - run: docker compose -f docker-compose.test.yml config -q
