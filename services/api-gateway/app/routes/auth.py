@@ -1,4 +1,5 @@
-﻿import os
+import os
+
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -14,15 +15,8 @@ ORG_SERVICE_URL = os.getenv("ORG_SERVICE_URL", "http://beta_organization:8001")
 async def login(payload: LoginRequest):
     async with httpx.AsyncClient(timeout=10.0) as client:
         r = await client.post(f"{ORG_SERVICE_URL}/auth/login", json=payload.model_dump())
-        
     if r.status_code != 200:
-        try:
-            detail = r.json().get("detail", "login_failed")
-        except Exception:
-            detail = r.text or "unknown_error_from_org_service"
-            
-        raise HTTPException(status_code=r.status_code, detail=detail)
-        
+        raise HTTPException(status_code=r.status_code, detail=r.json().get("detail", "login_failed"))
     return r.json()
 
 
