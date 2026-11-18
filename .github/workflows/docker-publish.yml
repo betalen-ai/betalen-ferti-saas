@@ -29,7 +29,7 @@ jobs:
           - { name: shop-pos-angular,  context: frontends/shop-pos-angular }
           - { name: backoffice-react,  context: frontends/backoffice-react }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: docker/setup-buildx-action@v3
 
