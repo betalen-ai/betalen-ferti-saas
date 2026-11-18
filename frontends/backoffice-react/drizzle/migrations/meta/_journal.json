@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1795014455981,
+      "tag": "0000_create_betalen_backoffice",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795014633770,
+      "tag": "0001_add_subscription_tenant_name",
+      "breakpoints": true
+    }
+  ]
+}
