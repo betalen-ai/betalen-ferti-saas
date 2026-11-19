@@ -8,7 +8,7 @@ export const Route = createFileRoute("/_authenticated/products")({
       { title: "Products — Betalen Backoffice" },
       { name: "description", content: "Fertilizer catalogue with pricing and GST." },
       { property: "og:title", content: "Products — Betalen Backoffice" },
-      { property: "og:description", content: "Fertilizer catalogue with pricing and GST." },
+      { property: "og:description", content: "Fertilizer catalogue with pricing and GST." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
     ],
   }),
   component: () => <CrudPage title="Products" description="Fertilizer catalogue with pricing and GST." entity="Product" table="products" initial={{id:"", name:"", category:"", price:0, gst:"5%", status:"active"}} />,

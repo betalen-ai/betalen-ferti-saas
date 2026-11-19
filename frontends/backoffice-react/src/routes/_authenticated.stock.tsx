@@ -8,7 +8,7 @@ export const Route = createFileRoute("/_authenticated/stock")({
       { title: "Stock & batches — Betalen Backoffice" },
       { name: "description", content: "Batch numbers, quantities and expiry dates." },
       { property: "og:title", content: "Stock & batches — Betalen Backoffice" },
-      { property: "og:description", content: "Batch numbers, quantities and expiry dates." },
+      { property: "og:description", content: "Batch numbers, quantities and expiry dates." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
     ],
   }),
   component: () => <CrudPage title="Stock & batches" description="Batch numbers, quantities and expiry dates." entity="Batch" table="stock_batches" initial={{id:"", product_name:"", warehouse_name:"", batch:"", quantity:0, expiry:""}} />,

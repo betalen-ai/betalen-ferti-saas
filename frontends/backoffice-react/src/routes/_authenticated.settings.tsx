@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 export const Route = createFileRoute("/_authenticated/settings")({
-  head: () => ({ meta: [{ title: "Settings — Betalen Backoffice" }, { name: "description", content: "Configure organization and platform settings." }, { property: "og:title", content: "Settings — Betalen Backoffice" }, { property: "og:description", content: "Configure organization and platform settings." }] }),
+  head: () => ({ meta: [{ title: "Settings — Betalen Backoffice" }, { name: "description", content: "Configure organization and platform settings." }, { property: "og:title", content: "Settings — Betalen Backoffice" }, { property: "og:description", content: "Configure organization and platform settings." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: SettingsPage,
 });
 function SettingsPage() {
