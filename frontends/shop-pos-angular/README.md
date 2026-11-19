@@ -1,10 +1,21 @@
-# ShopPos
+# Ferti+ Corporate Website
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 17.3.17.
+Responsive Angular marketing and authentication website for Ferti+, a free shop-management app for fertilizer retailers.
+
+## Routes
+
+- `/` Home
+- `/about` About
+- `/products` Products
+- `/pricing` Pricing
+- `/contact` Contact
+- `/signin` Sign in
+- `/signup` Sign up
+- `/forgot-password` Forgot password
 
 ## Development server
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+From this directory, run `npm install` and `npm start`. Navigate to `http://localhost:4200/`.
 
 ## Code scaffolding
 
@@ -12,7 +23,16 @@ Run `ng generate component component-name` to generate a new component. You can 
 
 ## Build
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+Run `npm run build`. The production build is written to `dist/shop-pos`.
+
+## Environment variables
+
+Set the API base URL in `src/environments/environment.ts` for development and `src/environments/environment.prod.ts` for production. Auth and contact submissions currently use placeholder UI loading states and can be connected to:
+
+- `POST /api/auth/login`
+- `POST /api/auth/register`
+- `POST /api/auth/forgot-password`
+- `POST /api/contact`
 
 ## Running unit tests
 
