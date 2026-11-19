@@ -21,7 +21,7 @@ export class AppComponent implements OnInit {
   ngOnInit() {
     this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(event => {
       const url = (event as NavigationEnd).urlAfterRedirects;
-      this.isAuthRoute = ['/signin', '/signup', '/forgot-password'].some(path => url.startsWith(path));
+      this.isAuthRoute = ['/signin', '/signup', '/forgot-password', '/reset-password', '/auth/callback', '/app'].some(path => url.startsWith(path));
       if (isPlatformBrowser(this.platformId)) window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   }
