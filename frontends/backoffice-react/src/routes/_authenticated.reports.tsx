@@ -4,7 +4,7 @@ import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { revenue } from "@/lib/backoffice-data";
 export const Route = createFileRoute("/_authenticated/reports")({
-  head: () => ({ meta: [{ title: "Reports — Betalen Backoffice" }, { name: "description", content: "Sales and platform activity reports for Betalen." }, { property: "og:title", content: "Reports — Betalen Backoffice" }, { property: "og:description", content: "Sales and platform activity reports for Betalen." }] }),
+  head: () => ({ meta: [{ title: "Reports — Betalen Backoffice" }, { name: "description", content: "Sales and platform activity reports for Betalen." }, { property: "og:title", content: "Reports — Betalen Backoffice" }, { property: "og:description", content: "Sales and platform activity reports for Betalen." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Reports,
 });
 function Reports() {

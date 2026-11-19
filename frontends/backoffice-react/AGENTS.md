@@ -33,3 +33,5 @@ use the editor.
 
 - The backoffice shell (sidebar + header) wraps every route from `__root.tsx`; add new admin sections as top-level route files and list them in `AdminShell`.
 - Management screens reuse `CrudPage` with sample data from `src/lib/backoffice-data.ts` until they are wired to the Betalen API gateway (`/api/*`), so data changes do not persist yet.
+- The repository’s `frontends/backoffice-react` stays a standalone Vite React application because its existing Docker/Nginx service serves static files and proxies `/api` requests.
+- Local credential testing in the standalone backoffice uses the Vite `/auth` proxy; the Cloud database remains the authority for CMS data access because the login API does not provide CMS data endpoints.

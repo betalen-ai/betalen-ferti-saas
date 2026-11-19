@@ -5,7 +5,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
     { title: "Dashboard — Betalen Backoffice" },
     { name: "description", content: "Organization backoffice for the Betalen Ferti SaaS platform." },
     { property: "og:title", content: "Dashboard — Betalen Backoffice" },
-    { property: "og:description", content: "Organization backoffice for the Betalen Ferti SaaS platform." },
+    { property: "og:description", content: "Organization backoffice for the Betalen Ferti SaaS platform." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
   ] }),
   component: DashboardPage,
 });
