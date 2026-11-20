@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,18 +8,14 @@ from app.db import get_db
 from app.models.permission import RolePermission
 from app.models.role import Role
 from app.schemas.role import RoleCreate, RoleOut
+from app.routes.ferti import current_identity
 
 router = APIRouter()
 
 
-def _require_tenant(x_tenant_id: str | None = Header(default=None)) -> UUID:
-    if not x_tenant_id:
-        raise HTTPException(401, detail="missing_tenant_header")
-    return UUID(x_tenant_id)
-
-
 @router.get("", response_model=list[RoleOut])
-async def list_roles(tenant_id: UUID = Depends(_require_tenant), db: AsyncSession = Depends(get_db)):
+async def list_roles(identity: dict[str, UUID] = Depends(current_identity), db: AsyncSession = Depends(get_db)):
+    tenant_id = identity["tenant_id"]
     rows = (await db.execute(select(Role).where(Role.tenant_id == tenant_id))).scalars().all()
     out = []
     for r in rows:
@@ -33,9 +29,10 @@ async def list_roles(tenant_id: UUID = Depends(_require_tenant), db: AsyncSessio
 @router.post("", response_model=RoleOut, status_code=201)
 async def create_role(
     payload: RoleCreate,
-    tenant_id: UUID = Depends(_require_tenant),
+    identity: dict[str, UUID] = Depends(current_identity),
     db: AsyncSession = Depends(get_db),
 ):
+    tenant_id = identity["tenant_id"]
     role = Role(tenant_id=tenant_id, name=payload.name)
     db.add(role)
     await db.flush()

@@ -1,29 +1,26 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
 from app.models.org_user import OrgUser
+from app.models.role import Role
 from app.schemas.org_user import OrgUserCreate, OrgUserOut
 from app.services.auth_service import hash_password
+from app.routes.ferti import current_identity
 
 router = APIRouter()
-
-
-def _require_tenant(x_tenant_id: str | None = Header(default=None)) -> UUID:
-    if not x_tenant_id:
-        raise HTTPException(401, detail="missing_tenant_header")
-    return UUID(x_tenant_id)
 
 
 @router.post("", response_model=OrgUserOut, status_code=201)
 async def create_user(
     payload: OrgUserCreate,
-    tenant_id: UUID = Depends(_require_tenant),
+    identity: dict[str, UUID] = Depends(current_identity),
     db: AsyncSession = Depends(get_db),
 ):
+    tenant_id = identity["tenant_id"]
     dup = (
         await db.execute(
             select(OrgUser).where(OrgUser.tenant_id == tenant_id, OrgUser.email == str(payload.email))
@@ -31,6 +28,12 @@ async def create_user(
     ).scalar_one_or_none()
     if dup:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="email_exists_in_tenant")
+    if payload.role_id:
+        role = (await db.execute(select(Role).where(
+            Role.id == payload.role_id, Role.tenant_id == tenant_id
+        ))).scalar_one_or_none()
+        if role is None:
+            raise HTTPException(404, detail="role_not_found")
 
     user = OrgUser(
         tenant_id=tenant_id,

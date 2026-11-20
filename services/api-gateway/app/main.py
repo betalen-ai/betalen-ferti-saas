@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routes import auth
-from app.routes import proxy
+from app.routes import proxy, ferti
 
 app = FastAPI(title="api-gateway", version="0.1.0")
 
@@ -18,7 +18,13 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(proxy.router, prefix="/proxy", tags=["proxy"])
+app.include_router(ferti.router)
 
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "api-gateway"}
+
+
+@app.get("/version")
+def version():
+    return {"service": "api-gateway", "version": app.version}
