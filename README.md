@@ -1,4 +1,4 @@
-# Ferti+ (Betalen Ferti SaaS): README with Goal, Business Model, Architecture, Workflow and Local Install
+# Ferti+ (Ferti SaaS): Goal, Business Model, Architecture, Workflow and Local Install
 
 Nov 21, 2026 · @Prasad
 
