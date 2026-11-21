@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.responses import JSONResponse
 from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -14,6 +15,31 @@ app = FastAPI(
     redoc_url=None,
     openapi_url="/api/openapi.json" if settings.ENVIRONMENT.lower() != "production" else None,
 )
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault(
+            "Permissions-Policy",
+            "camera=(self), geolocation=(), microphone=()",
+        )
+        if settings.ENVIRONMENT.lower() == "production":
+            response.headers.setdefault(
+                "Strict-Transport-Security",
+                "max-age=31536000; includeSubDomains",
+            )
+            response.headers.setdefault(
+                "Content-Security-Policy",
+                "default-src 'self'; frame-ancestors 'none'; base-uri 'self'",
+            )
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(tenants.router, prefix="/tenants", tags=["tenants"])

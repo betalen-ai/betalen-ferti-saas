@@ -10,6 +10,12 @@ from app.main import app
 from app.models import Farmer, Product
 from app.routes.ferti import _owned, _pack_factor, _pdf_response, _xlsx_response, calculate_bill
 from app.services.auth_service import create_access_token
+from app.services.feature_flags import can_use
+
+
+def test_free_plan_feature_flags_keep_core_features():
+    assert can_use(None, "billing") is True
+    assert can_use(None, "multiUser") is False
 
 
 def test_spot_bill_preview_applies_discount():

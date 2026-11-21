@@ -1,10 +1,24 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Request
 
 from app.routes import auth
 from app.routes import proxy, ferti
 
 app = FastAPI(title="api-gateway", version="0.1.0")
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault(
+        "Permissions-Policy",
+        "camera=(self), geolocation=(), microphone=()",
+    )
+    return response
 
 # Explicitly allow the Angular and React apps
 app.add_middleware(

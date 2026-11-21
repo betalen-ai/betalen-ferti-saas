@@ -5,7 +5,7 @@ import secrets
 import urllib.parse
 from io import BytesIO
 from functools import partial
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any
 
@@ -659,6 +659,66 @@ async def tenant_me(db: AsyncSession = Depends(get_db), identity: dict[str, uuid
     return _row(tenant)
 
 
+@router.get("/tenant/export")
+async def export_tenant_data(
+    db: AsyncSession = Depends(get_db),
+    identity: dict[str, uuid.UUID] = Depends(current_identity),
+):
+    tenant_id = identity["tenant_id"]
+    models = (
+        Brand,
+        Category,
+        Product,
+        Pack,
+        StockLot,
+        StockMovement,
+        Farmer,
+        Season,
+        Bill,
+        BillItem,
+        KhataEntry,
+        Payment,
+        PaymentAllocation,
+        CashbookEntry,
+    )
+    export: dict[str, list[dict[str, Any]]] = {}
+    for model in models:
+        rows = (await db.execute(select(model).where(model.tenant_id == tenant_id))).scalars().all()
+        export[model.__tablename__] = [_row(row) for row in rows]
+    tenant = await db.get(Tenant, tenant_id)
+    export["tenant"] = [_row(tenant)] if tenant else []
+    return export
+
+
+@router.post("/tenant/close", status_code=status.HTTP_202_ACCEPTED)
+async def close_tenant(
+    db: AsyncSession = Depends(get_db),
+    identity: dict[str, uuid.UUID] = Depends(current_identity),
+):
+    tenant = (await db.execute(select(Tenant).where(Tenant.id == identity["tenant_id"]).with_for_update())).scalar_one_or_none()
+    if tenant is None:
+        raise HTTPException(404, detail="tenant_not_found")
+    tenant.status = "closed"
+    sessions = (await db.execute(select(RefreshSession).where(
+        RefreshSession.tenant_id == tenant.id,
+        RefreshSession.revoked_at.is_(None),
+    ).with_for_update())).scalars().all()
+    now = datetime.now(timezone.utc)
+    for session in sessions:
+        session.revoked_at = now
+    await _audit(
+        db,
+        identity,
+        "tenant",
+        tenant.id,
+        "close",
+        {"status": "active"},
+        {"status": "closed"},
+    )
+    await db.commit()
+    return {"status": "closed", "retention": "owner_data_is_retained_until_approved_deletion"}
+
+
 @router.post("/auth/register", status_code=status.HTTP_201_CREATED)
 async def register_owner(
     payload: TenantSignupRequest,
@@ -1009,6 +1069,47 @@ async def refresh_session(
     await db.commit()
     _set_session_cookies(response, tokens)
     return tokens
+
+
+@router.get("/auth/sessions")
+async def list_sessions(
+    db: AsyncSession = Depends(get_db),
+    identity: dict[str, uuid.UUID] = Depends(current_identity),
+):
+    sessions = (await db.execute(select(RefreshSession).where(
+        RefreshSession.tenant_id == identity["tenant_id"],
+        RefreshSession.user_id == identity["user_id"],
+    ).order_by(RefreshSession.created_at.desc()))).scalars().all()
+    now = datetime.now(timezone.utc)
+    return [
+        {
+            "id": str(session.id),
+            "createdAt": session.created_at.isoformat(),
+            "expiresAt": session.expires_at.isoformat(),
+            "revoked": session.revoked_at is not None,
+            "active": session.revoked_at is None and session.expires_at > now,
+        }
+        for session in sessions
+    ]
+
+
+@router.post("/auth/sessions/revoke-all", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_all_sessions(
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    identity: dict[str, uuid.UUID] = Depends(current_identity),
+):
+    sessions = (await db.execute(select(RefreshSession).where(
+        RefreshSession.tenant_id == identity["tenant_id"],
+        RefreshSession.user_id == identity["user_id"],
+        RefreshSession.revoked_at.is_(None),
+    ).with_for_update())).scalars().all()
+    now = datetime.now(timezone.utc)
+    for session in sessions:
+        session.revoked_at = now
+    await db.commit()
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return response
 
 
 @router.get("/auth/oauth/google")
