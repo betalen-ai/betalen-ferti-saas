@@ -6,7 +6,7 @@ import {
   Plus, Search, Settings, ShieldCheck, Sprout, TrendingUp, Users, Wallet, Warehouse, X,
 } from "lucide-react";
 import { canEnterBackoffice } from "../access";
-import { loginToLocalApi, type LocalAuthSession } from "../auth/local-auth";
+import { loginToApi, type ApiAuthSession } from "../auth/local-auth";
 import { formatMoney, headingCase, navigationGroups, pageConfigs, type Field, type TableName } from "./data";
 
 const databaseUrl = window.__BETALEN_CONFIG__?.supabaseUrl;
@@ -44,9 +44,8 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [checking, setChecking] = useState(true);
-  const [configError, setConfigError] = useState("");
   const [authError, setAuthError] = useState("");
-  const [localSession, setLocalSession] = useState<LocalAuthSession | null>(null);
+  const [apiSession, setApiSession] = useState<ApiAuthSession | null>(null);
   const [mobileNav, setMobileNav] = useState(false);
   const [page, setPage] = useState<PageName>(pathToPage);
 
@@ -74,7 +73,6 @@ export default function App() {
 
   useEffect(() => {
     if (!supabase) {
-      setConfigError("Set the Lovable Cloud project URL and publishable key in this app’s environment before signing in.");
       setChecking(false);
       return;
     }
@@ -98,15 +96,15 @@ export default function App() {
   }, [verify]);
 
   useEffect(() => {
-    if (!localSession) return;
-    const remaining = localSession.expiresAt - Date.now();
+    if (!apiSession) return;
+    const remaining = apiSession.expiresAt - Date.now();
     if (remaining <= 0) {
-      setLocalSession(null);
+      setApiSession(null);
       return;
     }
-    const timeout = window.setTimeout(() => setLocalSession(null), remaining);
+    const timeout = window.setTimeout(() => setApiSession(null), remaining);
     return () => window.clearTimeout(timeout);
-  }, [localSession]);
+  }, [apiSession]);
 
   const navigate = (next: PageName) => {
     window.history.pushState({}, "", next === "dashboard" ? "/" : `/${next}`);
@@ -121,11 +119,11 @@ export default function App() {
     setAuthError("");
   };
 
-  const endLocalTest = () => setLocalSession(null);
+  const endApiSession = () => setApiSession(null);
 
   if (checking) return <LoadingScreen />;
-  if (!user && localSession) return <LocalApiVerified session={localSession} onSignOut={endLocalTest} />;
-  if (!user) return <SignInPage error={authError || configError} onClearError={() => setAuthError("")} onLocalAuthenticated={setLocalSession} />;
+  if (!user && apiSession) return <ApiLoginVerified session={apiSession} onSignOut={endApiSession} />;
+  if (!user) return <SignInPage error={authError} onClearError={() => setAuthError("")} onAuthenticated={setApiSession} />;
   if (!isAdmin) return <AccessDenied email={user.email ?? ""} error={authError} onSignOut={() => void signOut()} />;
 
   return (
@@ -173,8 +171,7 @@ function LoadingScreen() {
   return <main className="auth-page"><div className="auth-panel"><div className="brand-mark auth-mark"><Sprout size={21} /></div><p className="eyebrow">BETALEN FERTI</p><h1>Securing your workspace</h1><p className="auth-subtitle">Checking your administrator access…</p><span className="spinner" /></div></main>;
 }
 
-function SignInPage({ error, onClearError, onLocalAuthenticated }: { error: string; onClearError: () => void; onLocalAuthenticated: (session: LocalAuthSession) => void }) {
-  const [mode, setMode] = useState<"workspace" | "local">("workspace");
+function SignInPage({ error, onClearError, onAuthenticated }: { error: string; onClearError: () => void; onAuthenticated: (session: ApiAuthSession) => void }) {
   const [loading, setLoading] = useState(false);
   const [subdomain, setSubdomain] = useState("");
   const [email, setEmail] = useState("");
@@ -184,32 +181,15 @@ function SignInPage({ error, onClearError, onLocalAuthenticated }: { error: stri
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (mode === "local") {
-      setLoading(true);
-      setLocalError("");
-      onClearError();
-      try {
-        const session = await loginToLocalApi({ subdomain, email, password });
-        onLocalAuthenticated(session);
-      } catch (loginError) {
-        setLocalError(loginError instanceof Error ? loginError.message : "The local login could not be verified.");
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-    if (!supabase) return;
     setLoading(true);
     setLocalError("");
     onClearError();
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-    if (signInError) {
-      setLocalError(readableError(signInError));
-      setLoading(false);
-      return;
-    }
-    if (!data.user) {
-      setLocalError("Sign in did not return an account.");
+    try {
+      const session = await loginToApi({ subdomain, email, password });
+      onAuthenticated(session);
+    } catch (loginError) {
+      setLocalError(loginError instanceof Error ? loginError.message : "The API could not sign you in.");
+    } finally {
       setLoading(false);
     }
   };
@@ -218,23 +198,23 @@ function SignInPage({ error, onClearError, onLocalAuthenticated }: { error: stri
     <div className="auth-decoration"><div className="auth-circle circle-one" /><div className="auth-circle circle-two" /><div className="field-line field-one" /><div className="field-line field-two" /><div className="field-line field-three" /><div className="field-label"><Sprout size={16} /> GROWING TOGETHER</div></div>
     <section className="auth-panel">
       <div className="auth-brand"><div className="brand-mark auth-mark"><Sprout size={20} /></div><span>Betalen <b>Ferti</b></span></div>
-      <div className="auth-heading"><p className="eyebrow">{mode === "local" ? "LOCAL API TEST" : "PLATFORM MANAGEMENT"}</p><h1>{mode === "local" ? "Test your API login" : "Welcome back"}</h1><p className="auth-subtitle">{mode === "local" ? "Check credentials against the authentication service running on your computer." : "Sign in to your workspace to continue."}</p></div>
+      <div className="auth-heading"><p className="eyebrow">API SIGN IN</p><h1>Sign in</h1><p className="auth-subtitle">Use your shop subdomain and credentials to authenticate with the Betalen API.</p></div>
       <form className="auth-form" onSubmit={(event) => void submit(event)}>
-        {mode === "local" && <><label className="field-label-text" htmlFor="signin-subdomain">Workspace subdomain</label><input id="signin-subdomain" type="text" autoComplete="organization" placeholder="greenvalley" value={subdomain} onChange={(event) => setSubdomain(event.target.value)} required /></>}
+        <label className="field-label-text" htmlFor="signin-subdomain">Shop subdomain</label><input id="signin-subdomain" type="text" autoComplete="organization" placeholder="greenvalley" value={subdomain} onChange={(event) => setSubdomain(event.target.value)} required />
         <label className="field-label-text" htmlFor="signin-email">Email address</label>
         <input id="signin-email" type="email" autoComplete="username" placeholder="you@company.com" value={email} onChange={(event) => setEmail(event.target.value)} required />
         <div className="password-label-row"><label className="field-label-text" htmlFor="signin-password">Password</label></div>
         <div className="password-field"><input id="signin-password" type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="Enter your password" value={password} onChange={(event) => setPassword(event.target.value)} required /><button type="button" onClick={() => setShowPassword(!showPassword)}>{showPassword ? "Hide" : "Show"}</button></div>
         {(localError || error) && <p className="form-error" role="alert">{localError || error}</p>}
-        <button className="primary-button sign-in-button" type="submit" disabled={loading || (mode === "workspace" && !supabase)}>{loading ? (mode === "local" ? "Checking credentials…" : "Signing in…") : mode === "local" ? "Check local API login" : "Sign in to workspace"}<span>→</span></button>
+        <button className="primary-button sign-in-button" type="submit" disabled={loading}>{loading ? "Signing in…" : "Sign in"}<span>→</span></button>
       </form>
-      {mode === "local" ? <><p className="auth-note"><ShieldCheck size={15} /> Local credential check only; workspace data still requires workspace sign-in.</p><button className="auth-mode-toggle" type="button" onClick={() => { setMode("workspace"); setLocalError(""); }}>Back to workspace sign-in</button></> : <><p className="auth-note"><ShieldCheck size={15} /> Private workspace · administrator access only</p><p className="auth-footer">Need access? Contact your platform administrator.</p><button className="auth-mode-toggle" type="button" onClick={() => { setMode("local"); setLocalError(""); }}>Test local API login</button></>}
+      <p className="auth-note"><ShieldCheck size={15} /> API authentication does not grant access to platform CMS records.</p>
     </section>
   </main>;
 }
 
-function LocalApiVerified({ session, onSignOut }: { session: LocalAuthSession; onSignOut: () => void }) {
-  return <main className="auth-page"><section className="auth-panel denied-panel"><div className="brand-mark auth-mark"><ShieldCheck size={20} /></div><p className="eyebrow">LOCAL API TEST</p><h1>Credentials verified</h1><p className="auth-subtitle">{session.profile.email} · {session.profile.subdomain}</p><p className="auth-note">This confirms the local login endpoint accepted the credentials. It does not grant access to workspace records; use workspace sign-in for the CMS.</p><button className="primary-button sign-in-button" onClick={onSignOut}>Return to sign in</button></section></main>;
+function ApiLoginVerified({ session, onSignOut }: { session: ApiAuthSession; onSignOut: () => void }) {
+  return <main className="auth-page"><section className="auth-panel denied-panel"><div className="brand-mark auth-mark"><ShieldCheck size={20} /></div><p className="eyebrow">API SIGN IN</p><h1>Credentials verified</h1><p className="auth-subtitle">{session.profile.email} · {session.profile.subdomain}</p><p className="auth-note">The API accepted these credentials. This owner login does not grant access to platform CMS records.</p><button className="primary-button sign-in-button" onClick={onSignOut}>Return to sign in</button></section></main>;
 }
 
 function AccessDenied({ email, error, onSignOut }: { email: string; error: string; onSignOut: () => void }) {

@@ -1,10 +1,23 @@
+import uuid
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class LoginRequest(BaseModel):
-    subdomain: str
+    subdomain: str | None = None
+    tenant_id: str | None = None
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("tenant_id")
+    @classmethod
+    def validate_tenant_id(cls, value: str | None) -> str | None:
+        if value is None or value == "":
+            return None
+        try:
+            uuid.UUID(value)
+        except (ValueError, AttributeError) as exc:
+            raise ValueError("tenant_id must be a valid UUID") from exc
+        return value
 
     @field_validator("password")
     @classmethod

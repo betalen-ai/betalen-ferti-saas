@@ -12,7 +12,7 @@ ORG_SERVICE_URL = os.getenv("ORG_SERVICE_URL", "http://beta_organization:8001")
 @router.post("/login", response_model=TokenResponse)
 async def login(payload: LoginRequest):
     async with httpx.AsyncClient(timeout=10.0) as client:
-        r = await client.post(f"{ORG_SERVICE_URL}/auth/login", json=payload.model_dump())
+        r = await client.post(f"{ORG_SERVICE_URL}/api/v1/auth/login", json=payload.model_dump())
         
     if r.status_code != 200:
         try:

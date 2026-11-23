@@ -37,11 +37,14 @@ type SignInMethod = 'email' | 'phone';
             <label for="email">Email address</label>
             <input id="email" type="email" class="form-control" formControlName="email" autocomplete="username" placeholder="you@shop.com">
             <small class="error" *ngIf="bad('email')">Enter a valid email address.</small>
-            <div class="label-row"><label for="password">Password</label><a routerLink="/forgot-password">Forgot password?</a></div>
-            <div class="password">
-              <input id="password" [type]="showPassword ? 'text' : 'password'" class="form-control" formControlName="password" autocomplete="current-password">
-              <button type="button" class="toggle-password" (click)="showPassword = !showPassword" [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'">{{showPassword ? 'Hide' : 'Show'}}</button>
-            </div>
+<div class="label-row"><label for="password">Password</label><a routerLink="/forgot-password">Forgot password?</a></div>
+          <div class="password">
+            <input id="password" [type]="showPassword ? 'text' : 'password'" class="form-control" formControlName="password" autocomplete="current-password">
+            <button type="button" class="toggle-password" (click)="showPassword = !showPassword" [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'">{{showPassword ? 'Hide' : 'Show'}}</button>
+          </div>
+          <label for="tenantId">Tenant ID (optional — for super admin login)</label>
+          <input id="tenantId" type="text" class="form-control" formControlName="tenantId" placeholder="UUID or leave blank for subdomain">
+          <small class="error" *ngIf="bad('tenantId')">Enter a valid UUID.</small>
             <small class="error" *ngIf="bad('password')">Password must be at least 8 characters.</small>
             <button class="btn btn-primary primary-action" [disabled]="loading">{{loading ? 'Signing in...' : 'Sign in'}} <i class="bi bi-arrow-right"></i></button>
           </ng-container>
@@ -125,7 +128,8 @@ export class SigninComponent implements OnDestroy {
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(8)]],
       phone: ['', [Validators.required, Validators.pattern(/^[6-9]\d{9}$/)]],
-      otp: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]]
+      otp: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
+      tenantId: ['', [Validators.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)]]
     });
   }
 
@@ -153,7 +157,7 @@ export class SigninComponent implements OnDestroy {
       email.markAsTouched();
       password.markAsTouched();
       if (email.invalid || password.invalid) return;
-      await this.runAuth(() => this.auth.signInEmail(email.value ?? '', password.value ?? ''));
+      await this.runAuth(() => this.auth.signInEmail(email.value ?? '', password.value ?? '', this.form.controls['tenantId'].value ?? undefined));
       return;
     }
 

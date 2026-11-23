@@ -36,7 +36,7 @@ export const getCurrentAdmin = createServerFn({ method: "GET" })
 
 export const listBackofficeTable = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { table: TableName }) => input)
+  .validator((input: { table: TableName }) => input)
   .handler(async ({ data, context }) => {
     const { data: allowed, error: roleError } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "platform_admin" });
     if (roleError) throw new Error(roleError.message);
@@ -49,7 +49,7 @@ export const listBackofficeTable = createServerFn({ method: "POST" })
 
 export const saveBackofficeRow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { table: TableName; values: Record<string, Json>; id?: string }) => input)
+  .validator((input: { table: TableName; values: Record<string, Json>; id?: string }) => input)
   .handler(async ({ data, context }) => {
     const { data: allowed, error: roleError } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "platform_admin" });
     if (roleError) throw new Error(roleError.message);
@@ -70,7 +70,7 @@ export const saveBackofficeRow = createServerFn({ method: "POST" })
 
 export const deleteBackofficeRow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { table: TableName; id: string }) => input)
+  .validator((input: { table: TableName; id: string }) => input)
   .handler(async ({ data, context }) => {
     const { data: allowed, error: roleError } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "platform_admin" });
     if (roleError) throw new Error(roleError.message);

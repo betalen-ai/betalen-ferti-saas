@@ -1,10 +1,11 @@
-export type LocalLoginCredentials = {
-  subdomain: string;
+export type ApiLoginCredentials = {
+  subdomain?: string;
+  tenantId?: string;
   email: string;
   password: string;
 };
 
-export type LocalAuthSession = {
+export type ApiAuthSession = {
   expiresAt: number;
   profile: {
     subdomain: string;
@@ -22,30 +23,31 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-export async function loginToLocalApi(
-  credentials: LocalLoginCredentials,
+export async function loginToApi(
+  credentials: ApiLoginCredentials,
   request: typeof fetch = fetch,
-): Promise<LocalAuthSession> {
+): Promise<ApiAuthSession> {
   let response: Response;
   try {
-    response = await request("/auth/login", {
+    response = await request("/api/v1/auth/login", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        subdomain: credentials.subdomain.trim(),
+        subdomain: credentials.subdomain?.trim() || undefined,
+        tenant_id: credentials.tenantId?.trim() || undefined,
         email: credentials.email.trim(),
         password: credentials.password,
       }),
     });
   } catch {
-    throw new Error("The local login service is unavailable. Start it at http://localhost:8001.");
+    throw new Error("The authentication API is unavailable.");
   }
 
   let payload: unknown;
   try {
     payload = await response.json();
   } catch {
-    throw new Error("The local login service returned an unreadable response.");
+    throw new Error("The authentication API returned an unreadable response.");
   }
 
   if (!response.ok) {
@@ -53,7 +55,7 @@ export async function loginToLocalApi(
     if (detail === "invalid_credentials" || response.status === 401) {
       throw new Error("The subdomain, email, or password is incorrect.");
     }
-    throw new Error("The local login service could not sign you in.");
+    throw new Error("The authentication API could not sign you in.");
   }
 
   const result = payload as LoginResponse;
@@ -66,13 +68,13 @@ export async function loginToLocalApi(
     !Number.isFinite(result.expires_in) ||
     result.expires_in <= 0
   ) {
-    throw new Error("The local login service returned an invalid session.");
+    throw new Error("The authentication API returned an invalid session.");
   }
 
   return {
     expiresAt: Date.now() + result.expires_in * 1000,
     profile: {
-      subdomain: credentials.subdomain.trim(),
+      subdomain: credentials.subdomain?.trim() ?? "",
       email: credentials.email.trim(),
     },
   };
