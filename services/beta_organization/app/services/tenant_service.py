@@ -1,4 +1,4 @@
-import uuid
+﻿import uuid
 from datetime import date, timedelta
 
 from fastapi import HTTPException, status
@@ -85,7 +85,6 @@ async def signup_tenant(db: AsyncSession, payload: TenantSignupRequest) -> Tenan
     owner = OrgUser(
         tenant_id=tenant.id,
         email=str(payload.owner_email),
-        phone=payload.owner_phone,
         password_hash=hash_password(payload.owner_password),
         full_name=payload.owner_full_name,
         role_id=roles["owner"].id,

@@ -8,11 +8,11 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const rawHttp = new HttpClient(inject(HttpBackend));
 
   return next(authenticatedRequest).pipe(catchError((error: unknown) => {
-    if (!(error instanceof HttpErrorResponse) || error.status !== 401 || request.url.includes('/auth/refresh')) {
+    if (!(error instanceof HttpErrorResponse) || error.status !== 401 || request.url.includes('/api/v1/auth/refresh')) {
       return throwError(() => error);
     }
 
-    return rawHttp.post(`${environment.apiBaseUrl}/auth/refresh`, {}, { withCredentials: true }).pipe(
+    return rawHttp.post(`${environment.apiBaseUrl}/api/v1/auth/refresh`, {}, { withCredentials: true }).pipe(
       switchMap(() => next(authenticatedRequest)),
       catchError(() => throwError(() => error))
     );

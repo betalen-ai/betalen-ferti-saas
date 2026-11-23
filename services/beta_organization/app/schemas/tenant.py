@@ -33,6 +33,8 @@ class TenantOut(BaseModel):
 
 class TenantSignupResponse(BaseModel):
     tenant: TenantOut
-    access_token: str
+    status: str = "PENDING_REVIEW"
+    reference_no: str | None = None
+    access_token: str | None = None
     refresh_token: str | None = None
     token_type: str = "bearer"

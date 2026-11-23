@@ -1,4 +1,4 @@
-import uuid
+﻿import uuid
 from datetime import datetime, timedelta, timezone
 
 from jose import jwt, JWTError

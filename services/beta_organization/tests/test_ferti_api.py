@@ -18,6 +18,30 @@ def test_free_plan_feature_flags_keep_core_features():
     assert can_use(None, "multiUser") is False
 
 
+def test_pending_tenant_status_is_protected():
+    from app.models.tenant import Tenant
+    from app.routes.ferti import _tenant_status_error
+
+    tenant = Tenant(status="PENDING_REVIEW", reference_no="FRT-2026-000123")
+    error = _tenant_status_error(tenant)
+    assert error is not None
+    assert error.status_code == 403
+    assert error.detail["code"] == "TENANT_PENDING_REVIEW"
+    assert "under review" in error.detail["message"]
+
+
+def test_access_tokens_expire_in_fifteen_minutes():
+    token = create_access_token(
+        user_id=uuid.uuid4(),
+        tenant_id=uuid.uuid4(),
+        email="owner@example.com",
+        role="owner",
+    )
+    from jose import jwt
+    claims = jwt.decode(token, "change_me_in_prod", algorithms=["HS256"])
+    assert claims["exp"] - claims["iat"] == 15 * 60
+
+
 def test_spot_bill_preview_applies_discount():
     result = calculate_bill({
         "paymentType": "SPOT",

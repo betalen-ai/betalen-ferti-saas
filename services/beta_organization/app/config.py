@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://betalen:betalen_dev_pw@postgres:5432/betalen_db"
     JWT_SECRET: str = "change_me_in_prod"
     JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRE_MINUTES: int = 120
+    JWT_EXPIRE_MINUTES: int = 15
     ENVIRONMENT: str = "development"
     PUBLIC_API_URL: str = "http://localhost:8000"
     OTP_PROVIDER_URL: str | None = None

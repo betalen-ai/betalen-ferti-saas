@@ -135,9 +135,9 @@ export class SignupComponent implements OnDestroy {
     try {
       await this.auth.checkOtp(this.form.controls['phone'].value ?? '', this.form.controls['otp'].value ?? '');
       const { ownerName, shopName, email, phone, password } = this.form.getRawValue();
-      await this.auth.register({ name: ownerName ?? '', email: email ?? '', phone: phone ?? '' }, password ?? '');
       this.tenant.updateName(shopName ?? '');
-      await this.router.navigateByUrl('/app/dashboard');
+      await this.auth.register({ name: ownerName ?? '', email: email ?? '', phone: phone ?? '' }, password ?? '');
+      await this.router.navigateByUrl('/signin');
     } catch (error) {
       this.error = error instanceof Error ? error.message : 'Unable to create the account.';
     } finally { this.loading = false; }

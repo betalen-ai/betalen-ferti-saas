@@ -29,6 +29,16 @@ from app.models.ferti import (
     StockLot,
     StockMovement,
 )
+from app.models.onboarding import (
+    AuditLogEntry,
+    AuthEvent,
+    OtpRequest,
+    PasswordHistory,
+    PlatformAdmin,
+    RefreshToken,
+    TenantDocument,
+    TenantReview,
+)
 
 __all__ = [
     "Base", "Tenant", "Role", "Permission", "RolePermission", "OrgUser", "Subscription",
@@ -36,4 +46,6 @@ __all__ = [
     "BillItem", "Brand", "CashbookEntry", "Category",
     "Farmer", "IdempotencyRecord", "KhataEntry", "Pack", "Payment", "PaymentAllocation",
     "OtpChallenge", "Product", "RefreshSession", "Season", "Setting", "StockLot", "StockMovement",
+    "TenantDocument", "TenantReview", "PlatformAdmin", "RefreshToken", "AuthEvent",
+    "PasswordHistory", "OtpRequest", "AuditLogEntry",
 ]
