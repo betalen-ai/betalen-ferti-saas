@@ -8,11 +8,11 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-app.include_router(auth.router, prefix="/auth", tags=["auth"])
-app.include_router(tenants.router, prefix="/tenants", tags=["tenants"])
-app.include_router(org_users.router, prefix="/org_users", tags=["org_users"])
-app.include_router(roles.router, prefix="/roles", tags=["roles"])
-app.include_router(subscriptions.router, prefix="/subscriptions", tags=["subscriptions"])
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(tenants.router, prefix="/api/v1/tenants", tags=["tenants"])
+app.include_router(org_users.router, prefix="/api/v1/org_users", tags=["org_users"])
+app.include_router(roles.router, prefix="/api/v1/roles", tags=["roles"])
+app.include_router(subscriptions.router, prefix="/api/v1/subscriptions", tags=["subscriptions"])
 
 @app.get("/health")
 def health():

@@ -20,9 +20,9 @@ export class AuthService {
 
   constructor(private router: Router, private tenant: TenantService, private http: HttpClient) {}
 
-  async signInEmail(email: string, password: string): Promise<void> {
+  async signInEmail(email: string, password: string, tenantId?: string): Promise<void> {
     try {
-      const result = await firstValueFrom(this.http.post<any>('/api/v1/auth/login', { email: email.trim().toLowerCase(), password }, { withCredentials: true }));
+      const result = await firstValueFrom(this.http.post<any>('/api/v1/auth/login', { tenant_id: tenantId || undefined, email: email.trim().toLowerCase(), password }, { withCredentials: true }));
       this.accessToken = result.access_token ?? null;
       this.startSession({ name: email.split('@')[0], email: email.trim(), phone: '' });
     } catch (error) {

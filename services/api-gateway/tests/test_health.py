@@ -15,7 +15,7 @@ async def test_health():
 async def test_localhost_cors_allows_any_port():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
         r = await c.options(
-            "/auth/login",
+            "/api/v1/auth/login",
             headers={
                 "Origin": "http://localhost:3000",
                 "Access-Control-Request-Method": "POST",
