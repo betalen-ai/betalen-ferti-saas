@@ -20,4 +20,8 @@ export class TenantService {
     const tenant = this.tenant();
     this.tenant.set({ ...tenant, name: name.trim() || tenant.name });
   }
+
+  name(): string {
+    return this.tenant().name;
+  }
 }

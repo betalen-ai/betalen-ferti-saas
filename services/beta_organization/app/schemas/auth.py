@@ -4,7 +4,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class LoginRequest(BaseModel):
-    subdomain: str
+    subdomain: str | None = None
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
 

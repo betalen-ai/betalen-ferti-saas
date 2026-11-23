@@ -175,7 +175,7 @@ export class SigninComponent implements OnDestroy {
     this.loading = true;
     this.error = '';
     try {
-      await this.auth.sendOtp(phone.value ?? '');
+      await this.auth.sendOtp(phone.value ?? '', 'LOGIN');
       this.otpSent = true;
       this.attempts = 0;
       this.form.controls['otp'].reset('');

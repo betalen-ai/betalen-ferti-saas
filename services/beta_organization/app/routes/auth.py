@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+﻿from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -6,18 +6,13 @@ from app.config import settings
 from app.db import get_db
 from app.models.tenant import Tenant
 from app.schemas.auth import LoginRequest, TokenResponse
-from app.services.auth_service import authenticate_user
-from app.routes.ferti import _enforce_auth_rate_limit
-from app.routes.ferti import _issue_session, _set_session_cookies
+from app.services.auth_service import authenticate_user, create_access_token
 
 router = APIRouter()
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(payload: LoginRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
-    await _enforce_auth_rate_limit(
-        db, request, action="login", subject=f"{payload.subdomain}:{payload.email}", limit=5, window_seconds=60
-    )
+async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
     tenant = (
         await db.execute(select(Tenant).where(Tenant.subdomain == payload.subdomain))
     ).scalar_one_or_none()
@@ -29,10 +24,6 @@ async def login(payload: LoginRequest, request: Request, response: Response, db:
     )
     if not user:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="invalid_credentials")
-    if not user.email_verified:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="email_verification_required")
 
-    tokens = await _issue_session(db, user)
-    await db.commit()
-    _set_session_cookies(response, tokens)
-    return TokenResponse(**tokens)
+    token = create_access_token(user_id=user.id, tenant_id=tenant.id, email=user.email)
+    return TokenResponse(access_token=token, expires_in=settings.JWT_EXPIRE_MINUTES * 60)
