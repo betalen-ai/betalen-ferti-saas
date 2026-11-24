@@ -1,15 +1,12 @@
-import uuid
+﻿import uuid
 from datetime import datetime
-
 from pydantic import BaseModel, EmailStr, Field
-
 
 class OrgUserCreate(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8)
     full_name: str | None = None
-    role_id: uuid.UUID
-
+    role_id: uuid.UUID | None = None
 
 class OrgUserOut(BaseModel):
     id: uuid.UUID

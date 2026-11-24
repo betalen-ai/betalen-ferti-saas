@@ -1,9 +1,7 @@
 ﻿from uuid import UUID
-
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.db import get_db
 from app.models.permission import RolePermission
 from app.models.role import Role
@@ -21,18 +19,12 @@ async def list_roles(tenant_id: UUID = Depends(_require_tenant), db: AsyncSessio
     rows = (await db.execute(select(Role).where(Role.tenant_id == tenant_id))).scalars().all()
     out = []
     for r in rows:
-        perm_ids = (
-            await db.execute(select(RolePermission.permission_id).where(RolePermission.role_id == r.id))
-        ).scalars().all()
+        perm_ids = (await db.execute(select(RolePermission.permission_id).where(RolePermission.role_id == r.id))).scalars().all()
         out.append(RoleOut(id=r.id, tenant_id=r.tenant_id, name=r.name, permission_ids=list(perm_ids)))
     return out
 
 @router.post("", response_model=RoleOut, status_code=201)
-async def create_role(
-    payload: RoleCreate,
-    tenant_id: UUID = Depends(_require_tenant),
-    db: AsyncSession = Depends(get_db),
-):
+async def create_role(payload: RoleCreate, tenant_id: UUID = Depends(_require_tenant), db: AsyncSession = Depends(get_db)):
     role = Role(tenant_id=tenant_id, name=payload.name)
     db.add(role)
     await db.flush()
