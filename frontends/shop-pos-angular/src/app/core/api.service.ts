@@ -6,7 +6,13 @@ import { environment } from '../../environments/environment';
 export class ApiService {
   constructor(private http: HttpClient) {}
 
-  post<T>(path: string, body: unknown) {
-    return this.http.post<T>(`${environment.apiBaseUrl}${path}`, body);
+  private url(path: string) { return `${environment.apiBaseUrl}${path}`; }
+
+  get<T>(path: string, params?: Record<string, string | number>) {
+    return this.http.get<T>(this.url(path), { params: params as any });
   }
+  post<T>(path: string, body: unknown = {}) { return this.http.post<T>(this.url(path), body); }
+  put<T>(path: string, body: unknown) { return this.http.put<T>(this.url(path), body); }
+  patch<T>(path: string, body: unknown) { return this.http.patch<T>(this.url(path), body); }
+  delete<T>(path: string) { return this.http.delete<T>(this.url(path)); }
 }

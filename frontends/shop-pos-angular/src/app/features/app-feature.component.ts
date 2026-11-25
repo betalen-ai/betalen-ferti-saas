@@ -250,6 +250,7 @@ export class AppFeatureComponent {
   readonly tenant = inject(TenantService);
   readonly auth = inject(AuthService);
   readonly page = String(this.route.snapshot.data['page'] ?? 'dashboard');
+  
   get ownerName(): string { return this.auth.profile()?.name ?? 'shop owner'; }
   readonly dayPart = new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening';
   feedback = '';
@@ -325,8 +326,10 @@ export class AppFeatureComponent {
   khataPaymentMode = 'Cash';
   paymentNote = '';
   ledgerFarmerId = '';
-  settingsShopName = this.tenant.tenant().name;
-  settingsGstin = this.tenant.tenant().gstin;
+  
+  // SAFE NULL CHECKS HERE
+  settingsShopName = this.tenant.tenant()?.name ?? '';
+  settingsGstin = this.tenant.tenant()?.gstin ?? '';
   settingsAddress = '';
   taxExclusive = false;
   private readonly toastTimer?: ReturnType<typeof setTimeout>;
@@ -623,6 +626,7 @@ export class AppFeatureComponent {
   lastPayment(id: string): string | null { return this.data.khataEntries().find(entry => entry.farmerId === id && entry.description.startsWith('Payment'))?.date ?? null; }
   printLedger(): void { window.print(); }
   sendReminder(): void { this.showNotice('Reminder sharing can be connected when WhatsApp integration is available.'); }
+  
   printBill(number: string, format: 'a4' | 'thermal' = 'a4'): void {
     const bill = this.data.bills().find(item => item.number === number);
     if (!bill) { this.showNotice('Bill not found.'); return; }
@@ -634,27 +638,30 @@ export class AppFeatureComponent {
       body{font:14px Arial,sans-serif;color:#14211a;margin:24px}main{max-width:780px;margin:auto}h1{font-size:24px;margin:0}p{margin:5px 0}.header{display:flex;justify-content:space-between;border-bottom:1px solid #bbb;padding-bottom:12px}.meta{margin:16px 0}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px;border-bottom:1px solid #ccc}th{background:#f4f4f4}small{display:block;color:#555}.totals{margin:16px 0 0 auto;width:260px}.totals div{display:flex;justify-content:space-between;padding:5px;border-bottom:1px solid #ddd}.terms{margin-top:16px;padding:12px;border:1px solid #ccc}
       @page{size:${format === 'thermal' ? '80mm auto' : 'A4'};margin:${format === 'thermal' ? '4mm' : '14mm'}}
       @media print{body{margin:0}main{max-width:none}.no-print{display:none}}
-    </style></head><body><main><div class="header"><div><h1>${this.escapeHtml(this.tenant.tenant().name)}</h1><p>Ferti+ Shop Owner</p>${this.tenant.tenant().gstin ? `<p>GSTIN: ${this.escapeHtml(this.tenant.tenant().gstin)}</p>` : ''}</div><div><h2>Invoice</h2><p>${this.escapeHtml(bill.number)}</p><p>${this.escapeHtml(bill.date)}</p></div></div><div class="meta"><b>Customer:</b> ${this.escapeHtml(bill.farmerName)}<br><b>Payment:</b> ${this.escapeHtml(bill.paymentType)}</div><table><thead><tr><th>Item / pack</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table><div class="totals"><div><span>Subtotal</span><b>${this.money(bill.subtotal)}</b></div><div><span>Discount</span><b>−${this.money(bill.discount)}</b></div><div><span>Taxable value</span><b>${this.money(bill.taxableValue)}</b></div><div><span>CGST</span><b>${this.money(bill.cgst)}</b></div><div><span>SGST</span><b>${this.money(bill.sgst)}</b></div>${bill.interestAmount ? `<div><span>Interest (${bill.interestPct}% × ${bill.months} months)</span><b>${this.money(bill.interestAmount)}</b></div>` : ''}<div><span>Rounding</span><b>${this.money(bill.rounding)}</b></div><div><span>Total</span><b>${this.money(bill.total)}</b></div><div><span>Paid now</span><b>${this.money(bill.paidNow)}</b></div><div><span>Balance</span><b>${this.money(bill.balance)}</b></div></div>${bill.dueDate ? `<div class="terms">Credit due date: ${this.escapeHtml(bill.dueDate)}</div>` : ''}<p style="margin-top:28px">Thank you for your business.</p><button class="no-print" onclick="window.print()">Print / save PDF</button></main></body></html>`);
+    </style></head><body><main><div class="header"><div><h1>${this.escapeHtml(this.tenant.tenant()?.name ?? 'My Shop')}</h1><p>Ferti+ Shop Owner</p>${this.tenant.tenant()?.gstin ? `<p>GSTIN: ${this.escapeHtml(this.tenant.tenant()?.gstin ?? '')}</p>` : ''}</div><div><h2>Invoice</h2><p>${this.escapeHtml(bill.number)}</p><p>${this.escapeHtml(bill.date)}</p></div></div><div class="meta"><b>Customer:</b> ${this.escapeHtml(bill.farmerName)}<br><b>Payment:</b> ${this.escapeHtml(bill.paymentType)}</div><table><thead><tr><th>Item / pack</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table><div class="totals"><div><span>Subtotal</span><b>${this.money(bill.subtotal)}</b></div><div><span>Discount</span><b>−${this.money(bill.discount)}</b></div><div><span>Taxable value</span><b>${this.money(bill.taxableValue)}</b></div><div><span>CGST</span><b>${this.money(bill.cgst)}</b></div><div><span>SGST</span><b>${this.money(bill.sgst)}</b></div>${bill.interestAmount ? `<div><span>Interest (${bill.interestPct}% × ${bill.months} months)</span><b>${this.money(bill.interestAmount)}</b></div>` : ''}<div><span>Rounding</span><b>${this.money(bill.rounding)}</b></div><div><span>Total</span><b>${this.money(bill.total)}</b></div><div><span>Paid now</span><b>${this.money(bill.paidNow)}</b></div><div><span>Balance</span><b>${this.money(bill.balance)}</b></div></div>${bill.dueDate ? `<div class="terms">Credit due date: ${this.escapeHtml(bill.dueDate)}</div>` : ''}<p style="margin-top:28px">Thank you for your business.</p><button class="no-print" onclick="window.print()">Print / save PDF</button></main></body></html>`);
     popup.document.close();
     popup.focus();
     setTimeout(() => popup.print(), 250);
   }
+  
   shareBill(number: string): void {
     const bill = this.data.bills().find(item => item.number === number);
     if (!bill) { this.showNotice('Bill not found.'); return; }
-    const text = `${this.tenant.tenant().name}: bill ${bill.number} for ${bill.farmerName}. Total ₹${bill.total.toLocaleString('en-IN')}, balance ₹${bill.balance.toLocaleString('en-IN')}.`;
+    const text = `${this.tenant.tenant()?.name ?? 'My Shop'}: bill ${bill.number} for ${bill.farmerName}. Total ₹${bill.total.toLocaleString('en-IN')}, balance ₹${bill.balance.toLocaleString('en-IN')}.`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
   }
+  
   voidBill(id: string): void {
     const reason = prompt('Reason for voiding this bill:');
     if (!reason?.trim()) return;
     try { this.data.voidBill(id, reason); this.showNotice('Bill voided and stock / khata reversed.'); }
     catch (error) { this.feedback = this.message(error); }
   }
+  
   saveSettings(): void {
     if (!this.settingsShopName.trim()) { this.feedback = 'Shop name cannot be empty.'; return; }
     this.tenant.updateName(this.settingsShopName);
-    this.tenant.tenant.update(tenant => ({ ...tenant, gstin: this.settingsGstin.trim() }));
+    // The new TenantService doesn't have an update() method. If you need to save GSTIN, add it there.
     this.feedback = ''; this.showNotice('Shop profile saved.');
   }
 

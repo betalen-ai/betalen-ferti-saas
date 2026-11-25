@@ -33,20 +33,27 @@ import { LogoComponent } from '../../shared/logo/logo.component';
           <small class="error" *ngIf="bad('password')">Password must have at least 8 characters.</small>
           <div class="strength" aria-label="Password strength"><i [class.on]="strength>0"></i><i [class.on]="strength>1"></i><i [class.on]="strength>2"></i><i [class.on]="strength>3"></i></div>
           <small class="error" *ngIf="form.errors?.['mismatch'] && form.controls['confirm'].touched">Passwords do not match.</small>
+          
           <button *ngIf="!otpSent" type="button" class="btn btn-primary primary-action" [disabled]="loading" (click)="sendCode()">{{loading ? 'Sending code...' : 'Verify mobile number'}}</button>
+          
           <ng-container *ngIf="otpSent">
             <label class="otp-label">Enter the 6-digit SMS code<input class="form-control" inputmode="numeric" maxlength="6" formControlName="otp" autocomplete="one-time-code"></label>
             <small class="hint">Demo code: 123456 · Expires in {{otpExpiry}}. Attempts remaining: {{5 - attempts}}.</small>
             <button type="submit" class="btn btn-primary primary-action" [disabled]="loading || attempts>=5">{{loading ? 'Creating account...' : 'Verify and create account'}}</button>
             <button type="button" class="btn secondary-action" [disabled]="resendSeconds>0 || loading || attempts>=5" (click)="sendCode()">{{resendSeconds ? 'Resend code in '+resendSeconds+'s' : 'Resend code'}}</button>
           </ng-container>
+
           <p class="email-notice">After sign-up, an email verification link will be sent to your address.</p>
           <div class="divider"><span>or</span></div>
+          
           <button *ngIf="!googleSetup" type="button" class="btn secondary-action" (click)="googleSetup=true"><i class="bi bi-google"></i> Continue with Google</button>
+          
           <div *ngIf="googleSetup" class="google-setup">
-            <label>Shop name<input class="form-control" #googleShop></label><label>Mobile number<input class="form-control" type="tel" maxlength="10" #googlePhone></label>
+            <label>Shop name<input class="form-control" #googleShop></label>
+            <label>Mobile number<input class="form-control" type="tel" maxlength="10" #googlePhone></label>
             <button type="button" class="btn btn-primary primary-action" (click)="signUpWithGoogle(googleShop.value, googlePhone.value)">Finish Google sign-up</button>
           </div>
+
           <p class="switch">Already have an account? <a routerLink="/signin">Sign in</a></p>
           <p class="mock-notice">Demo authentication: OTP is 123456; Google sign-up is simulated.</p>
         </form>
@@ -112,9 +119,10 @@ export class SignupComponent implements OnDestroy {
     this.form.markAllAsTouched();
     const required = ['ownerName', 'shopName', 'phone', 'email', 'password', 'confirm'];
     if (required.some(name => this.form.get(name)?.invalid) || this.form.errors?.['mismatch']) return;
+    
     this.loading = true;
     try {
-      await this.auth.sendOtp(this.form.controls['phone'].value ?? '');
+      await this.auth.sendOtp(this.form.controls['phone'].value ?? '', 'REGISTER_VERIFY');
       this.otpSent = true;
       this.attempts = 0;
       this.resendSeconds = 30;
@@ -130,13 +138,21 @@ export class SignupComponent implements OnDestroy {
     this.form.markAllAsTouched();
     if (this.form.invalid || !this.otpSent || this.attempts >= 5) return;
     if (Date.now() > this.otpExpiresAt) { this.error = 'That code has expired. Request a new one.'; return; }
+    
     this.attempts++;
     this.loading = true;
     try {
       await this.auth.checkOtp(this.form.controls['phone'].value ?? '', this.form.controls['otp'].value ?? '');
       const { ownerName, shopName, email, phone, password } = this.form.getRawValue();
-      this.tenant.updateName(shopName ?? '');
-      await this.auth.register({ name: ownerName ?? '', email: email ?? '', phone: phone ?? '' }, password ?? '');
+      
+      // Updated to match the new AuthService.register signature
+      await this.auth.register(
+        { name: ownerName ?? '', email: email ?? '', phone: phone ?? '' },
+        password ?? '',
+        { shopName: shopName ?? '', shopTypes: ['fertilizers'] }, // Defaulting to fertilizers
+        'en'
+      );
+      
       await this.router.navigateByUrl('/signin');
     } catch (error) {
       this.error = error instanceof Error ? error.message : 'Unable to create the account.';
@@ -147,7 +163,7 @@ export class SignupComponent implements OnDestroy {
     this.error = '';
     this.loading = true;
     try {
-      await this.auth.signInGoogle(shopName, phone);
+      await this.auth.signInGoogle();
       await this.router.navigateByUrl('/app/dashboard');
     } catch (error) {
       this.error = error instanceof Error ? error.message : 'Unable to complete Google sign-up.';

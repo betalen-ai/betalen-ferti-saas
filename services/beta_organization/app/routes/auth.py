@@ -1,6 +1,7 @@
 ﻿from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
+import uuid
 
 from app.config import settings
 from app.db import get_db
@@ -14,26 +15,32 @@ router = APIRouter()
 @router.post("/login", response_model=TokenResponse)
 async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
     
-    tenant_id = None
+    tenant = None
     
-    # 1. Resolve Tenant ID (Shop POS users)
-    if payload.tenant_id:
-        tenant_id = payload.tenant_id
-    elif payload.subdomain:
-        tenant = (await db.execute(select(Tenant).where(Tenant.subdomain == payload.subdomain))).scalar_one_or_none()
-        if not tenant:
+    # 1. Try to find the tenant by ID or Subdomain
+    tenant_identifier = payload.tenant_id or payload.subdomain
+    
+    if tenant_identifier:
+        try:
+            # Check if it's a valid UUID
+            tenant_uuid = uuid.UUID(tenant_identifier)
+            tenant = (await db.execute(select(Tenant).where(Tenant.id == tenant_uuid))).scalar_one_or_none()
+        except ValueError:
+            # Not a UUID, so treat it as a subdomain
+            tenant = (await db.execute(select(Tenant).where(Tenant.subdomain == tenant_identifier))).scalar_one_or_none()
+            
+        if not tenant or tenant.status != "active":
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="invalid_credentials")
-        tenant_id = tenant.id
 
-    # 2. Authenticate
-    if tenant_id:
-        # Standard Shop Owner / Cashier
-        user = await authenticate_user(db, tenant_id=tenant_id, email=str(payload.email), password=payload.password)
+        # Authenticate with tenant_id
+        user = await authenticate_user(
+            db, tenant_id=tenant.id, email=str(payload.email), password=payload.password
+        )
     else:
-        # Super Admin (Backoffice) - No tenant ID provided, look up by email
+        # Super Admin (No tenant provided)
         result = await db.execute(select(OrgUser).where(OrgUser.email == str(payload.email), OrgUser.status == "active"))
         user = result.scalar_one_or_none()
-        if not user or not verify_password(payload.password, user.password_hash):
+        if user and not verify_password(payload.password, user.password_hash):
             user = None
 
     if not user:

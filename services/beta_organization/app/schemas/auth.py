@@ -3,7 +3,7 @@ from pydantic import BaseModel, EmailStr
 
 class LoginRequest(BaseModel):
     tenant_id: str | None = None
-    subdomain: str | None = None  # keeping this to not break old frontend immediately
+    subdomain: str | None = None
     email: EmailStr
     password: str
 

@@ -33,26 +33,35 @@ type SignInMethod = 'email' | 'phone';
           </div>
 
           <div class="alert alert-danger" *ngIf="error" role="alert">{{error}}</div>
+          
           <ng-container *ngIf="method === 'email'; else phoneForm">
             <label for="email">Email address</label>
             <input id="email" type="email" class="form-control" formControlName="email" autocomplete="username" placeholder="you@shop.com">
             <small class="error" *ngIf="bad('email')">Enter a valid email address.</small>
-<div class="label-row"><label for="password">Password</label><a routerLink="/forgot-password">Forgot password?</a></div>
-          <div class="password">
-            <input id="password" [type]="showPassword ? 'text' : 'password'" class="form-control" formControlName="password" autocomplete="current-password">
-            <button type="button" class="toggle-password" (click)="showPassword = !showPassword" [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'">{{showPassword ? 'Hide' : 'Show'}}</button>
-          </div>
-          <label for="tenantId">Tenant ID (optional — for super admin login)</label>
-          <input id="tenantId" type="text" class="form-control" formControlName="tenantId" placeholder="UUID or leave blank for subdomain">
-          <small class="error" *ngIf="bad('tenantId')">Enter a valid UUID.</small>
+            
+            <div class="label-row">
+              <label for="password">Password</label>
+              <a routerLink="/forgot-password">Forgot password?</a>
+            </div>
+            <div class="password">
+              <input id="password" [type]="showPassword ? 'text' : 'password'" class="form-control" formControlName="password" autocomplete="current-password">
+              <button type="button" class="toggle-password" (click)="showPassword = !showPassword" [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'">{{showPassword ? 'Hide' : 'Show'}}</button>
+            </div>
             <small class="error" *ngIf="bad('password')">Password must be at least 8 characters.</small>
+
+            <label for="tenantId">Shop Subdomain / Tenant ID</label>
+            <input id="tenantId" type="text" class="form-control" formControlName="tenantId" placeholder="e.g. greenvalley">
+            <small class="hint">Leave blank if you are a Super Admin.</small>
+
             <button class="btn btn-primary primary-action" [disabled]="loading">{{loading ? 'Signing in...' : 'Sign in'}} <i class="bi bi-arrow-right"></i></button>
           </ng-container>
+
           <ng-template #phoneForm>
             <label for="phone">Mobile number</label>
             <div class="phone-input"><span>+91</span><input id="phone" type="tel" inputmode="numeric" maxlength="10" class="form-control" formControlName="phone" autocomplete="tel-national" placeholder="10-digit mobile number"></div>
             <small class="error" *ngIf="bad('phone')">Enter a valid 10-digit Indian mobile number.</small>
             <button *ngIf="!otpSent" type="button" class="btn btn-primary primary-action" [disabled]="loading" (click)="sendCode()">{{loading ? 'Sending code...' : 'Send OTP'}}</button>
+            
             <ng-container *ngIf="otpSent">
               <label for="otp">6-digit verification code</label>
               <input id="otp" type="text" inputmode="numeric" maxlength="6" class="form-control otp-input" formControlName="otp" autocomplete="one-time-code" placeholder="Enter code">
@@ -129,7 +138,7 @@ export class SigninComponent implements OnDestroy {
       password: ['', [Validators.required, Validators.minLength(8)]],
       phone: ['', [Validators.required, Validators.pattern(/^[6-9]\d{9}$/)]],
       otp: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
-      tenantId: ['', [Validators.pattern(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/)]]
+      tenantId: ['']
     });
   }
 
@@ -157,6 +166,7 @@ export class SigninComponent implements OnDestroy {
       email.markAsTouched();
       password.markAsTouched();
       if (email.invalid || password.invalid) return;
+      
       await this.runAuth(() => this.auth.signInEmail(email.value ?? '', password.value ?? '', this.form.controls['tenantId'].value ?? undefined));
       return;
     }
@@ -169,7 +179,7 @@ export class SigninComponent implements OnDestroy {
       return;
     }
     this.attempts++;
-    await this.runAuth(() => this.auth.verifyOtp(this.form.controls['phone'].value ?? '', otp.value ?? ''));
+    await this.runAuth(() => this.auth.signInOtp(this.form.controls['phone'].value ?? '', otp.value ?? ''));
   }
 
   async sendCode(): Promise<void> {
@@ -199,7 +209,7 @@ export class SigninComponent implements OnDestroy {
   }
 
   async completeGoogleSignIn(): Promise<void> {
-    await this.runAuth(() => this.auth.signInGoogle(this.googleShopName, this.googlePhone));
+    await this.runAuth(() => this.auth.signInGoogle());
   }
 
   private async runAuth(action: () => Promise<void>): Promise<void> {

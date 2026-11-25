@@ -1,4 +1,5 @@
 export const environment = {
   production: true,
-  apiBaseUrl: 'http://localhost:8000' // Or your production API URL
+  apiBaseUrl: 'http://localhost:8000/api/v1',
+  googleClientId: '',
 };

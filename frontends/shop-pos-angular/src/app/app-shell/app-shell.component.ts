@@ -123,7 +123,7 @@ export class AppShellComponent {
   drawerOpen = false;
   profileOpen = false;
   today = new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date());
-  tenantName = computed(() => this.tenant.tenant().name);
+  tenantName = computed(() => this.tenant.tenant()?.name ?? 'Ferti+');
   profileName = computed(() => this.auth.profile()?.name ?? 'Shop owner');
   cashDrawer = this.data.cashInHand;
 
