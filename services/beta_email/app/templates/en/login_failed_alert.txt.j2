@@ -1,0 +1,11 @@
+Hello {{ ownerName }},
+
+We detected {{ attemptCount }} failed {{ method }} sign-in attempts, last attempted at {{ lastAttemptAt }}.
+IP: {{ ip }}
+Device: {{ deviceDescription }}
+{% if locked %}Your account is temporarily locked{% if lockedUntil %} until {{ lockedUntil }}{% endif %}.{% endif %}
+
+Reset password: {{ resetPasswordLink }}
+If this was you, no action is needed.
+Use a strong, unique password and never share it.
+Support: {{ supportEmail }}

@@ -91,6 +91,27 @@ services:
     networks:
       - betalen-net
 
+  beta_email:
+    build: ./services/beta_email
+    env_file: .env
+    expose:
+      - "8005"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    networks:
+      - betalen-net
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    networks:
+      - betalen-net
+
   shop-pos-angular:
     build: ./frontends/shop-pos-angular
     ports:

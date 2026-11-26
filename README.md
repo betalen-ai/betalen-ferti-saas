@@ -103,6 +103,7 @@ Related documents (store them in the repo under `docs/`): Corporate Website Buil
 | `beta_billing` | FastAPI | 8002 | Farmers, seasons, bills, payments, khata ledger, interest and discount engine |
 | `beta_inventory` | FastAPI | 8003 | Brands, categories, products, packs, stock, batch and expiry |
 | `beta_reports` | FastAPI | 8004 | Dashboard numbers, reports, Excel and PDF exports |
+| `beta_email` | FastAPI | 8005 (internal) | Transactional email queue, templates and Gmail/Mailpit delivery |
 | `postgres` | PostgreSQL 16 | 5432 | One database, one schema per service |
 | `redis` | Redis 7 | 6379 | Cache, OTP storage, rate limits (optional at first) |
 
@@ -227,7 +228,7 @@ betalen-ferti-saas/
   docs/                       # the five specification documents + openapi.yaml
   postgres/init/01-init.sql   # schemas and tables
   services/
-    api-gateway/  beta_organization/  beta_billing/  beta_inventory/  beta_reports/
+    api-gateway/  beta_organization/  beta_billing/  beta_inventory/  beta_reports/  beta_email/
       app/ (main.py, config.py, db.py, routes/, schemas/, services/, validations/, integrations/, models/)
       tests/  Dockerfile  requirements.txt  README.md
   frontends/
