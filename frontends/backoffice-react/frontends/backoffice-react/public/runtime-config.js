@@ -1,1 +1,0 @@
-window.__BETALEN_CONFIG__ = window.__BETALEN_CONFIG__ || {};

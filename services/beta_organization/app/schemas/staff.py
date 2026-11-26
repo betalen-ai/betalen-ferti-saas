@@ -1,25 +1,31 @@
 import uuid
 from datetime import datetime
-from typing import Any
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field
+
+ROLE_TEMPLATES = r"^(pos_user|stock_keeper|accountant|custom)$"
+MOBILE = r"^\+91[6-9]\d{9}$"
 
 
 class StaffCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
-    mobile: str = Field(pattern=r"^\+91[6-9]\d{9}$")
+    mobile: str = Field(pattern=MOBILE)
     email: EmailStr | None = None
-    role_template: str = Field(pattern=r"^(pos_user|stock_keeper|accountant|custom)$")
+    role_template: str = Field(pattern=ROLE_TEMPLATES)
     permissions: list[str] = []
     is_active: bool = True
+    password: str | None = Field(default=None, min_length=8, max_length=128)
 
 
 class StaffUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=120)
-    mobile: str | None = Field(default=None, pattern=r"^\+91[6-9]\d{9}$")
+    mobile: str | None = Field(default=None, pattern=MOBILE)
     email: EmailStr | None = None
-    role_template: str | None = Field(default=None, pattern=r"^(pos_user|stock_keeper|accountant|custom)$")
+    role_template: str | None = Field(default=None, pattern=ROLE_TEMPLATES)
     permissions: list[str] | None = None
-    is_active: bool | None = None
+
+
+class StaffPasswordReset(BaseModel):
+    new_password: str = Field(min_length=8, max_length=128)
 
 
 class StaffOut(BaseModel):
@@ -44,3 +50,10 @@ class StaffListOut(BaseModel):
     total: int
     seats_used: int
     seats_available: int | None = None
+
+
+class SeatsOut(BaseModel):
+    plan: str
+    max_staff: int | None
+    seats_used: int
+    seats_available: int | None
