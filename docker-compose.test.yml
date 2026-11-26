@@ -33,3 +33,12 @@ services:
       DATABASE_URL: postgresql+asyncpg://test:test@postgres-test:5432/betalen_test
     depends_on:
       - postgres-test
+
+  beta_email_tests:
+    build: ./services/beta_email
+    command: pytest tests/ -v --cov=app
+    environment:
+      DATABASE_URL: postgresql+asyncpg://test:test@postgres-test:5432/betalen_test
+      EMAIL_PROVIDER: console
+    depends_on:
+      - postgres-test
