@@ -1,163 +1,355 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import {
-  Bill, BillLine, Brand, Category, Farmer, KhataEntry, Pack, PackUnit, PaymentType,
-  Product, ProductPackInput, ProductType, Season, StockEntry
+  Bill, BillLine, Brand, BrandCreate, BrandUpdate, Cashbook, CashbookCreate, CashbookUpdate,
+  Category, CategoryCreate, CategoryUpdate, Farmer, FarmerCreate, FarmerUpdate,
+  KhataEntry, Pack, PackCreate, PackUpdate, PackUnit, PaymentType,
+  Product, ProductCreate, ProductPackInput, ProductType, ProductUpdate,
+  Season, SeasonCreate, SeasonUpdate, Settings, SettingsIn,
+  StockLot, StockLotCreate, StockLotUpdate, StockMovement, StockMovementCreate, StockEntry,
 } from '../models/shop.models';
 import { allocatePayment, calcCreditTotal, calcSpotTotal, UnpaidBill } from '../utils/interest.util';
 
+const API_BASE = '/api/ferti';
+
+interface PageQuery {
+  limit?: number;
+  offset?: number;
+  search?: string;
+  tenant_id?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ShopDataService {
-  readonly brands = signal<Brand[]>([
-    { id: 'brand-kisan', name: 'Kisan Gold', manufacturer: 'Kisan Agro', notes: '', active: true },
-    { id: 'brand-green', name: 'GreenGrow', manufacturer: 'GreenGrow India', notes: '', active: true },
-    { id: 'brand-bharat', name: 'Bharat Seeds', manufacturer: 'Bharat Agri', notes: '', active: true }
-  ]);
-  readonly categories = signal<Category[]>([
-    { id: 'cat-fertilizer', name: 'Chemical fertilizer', type: 'Solid', gstPercent: 5, active: true },
-    { id: 'cat-liquid', name: 'Liquid fertilizer and bio-stimulant', type: 'Liquid', gstPercent: 18, active: true },
-    { id: 'cat-seed', name: 'Seeds', type: 'Solid', gstPercent: 0, active: true },
-    { id: 'cat-tool', name: 'Machinery and tools', type: 'Item', gstPercent: 18, active: true }
-  ]);
-  readonly products = signal<Product[]>([
-    this.seedProduct('product-urea', 'Urea', 'brand-kisan', 'cat-fertilizer', 'Solid', '46% Nitrogen', 'kg', [
-      this.seedPack('urea-5', '5 kg bag', 5, 'kg', 150, 145),
-      this.seedPack('urea-50', '50 kg bag', 50, 'kg', 270, 265)
-    ], { 'urea-5': 75, 'urea-50': 2000 }, 250),
-    this.seedProduct('product-dap', 'DAP', 'brand-kisan', 'cat-fertilizer', 'Solid', '18-46-0', 'kg', [
-      this.seedPack('dap-50', '50 kg bag', 50, 'kg', 1350, 1320)
-    ], { 'dap-50': 1000 }, 500),
-    this.seedProduct('product-nano', 'Nano Urea', 'brand-green', 'cat-liquid', 'Liquid', '4% Nitrogen', 'L', [
-      this.seedPack('nano-500', '500 ml bottle', 0.5, 'L', 225, 210),
-      this.seedPack('nano-5l', '5 L can', 5, 'L', 1800, 1750)
-    ], { 'nano-500': 14, 'nano-5l': 30 }, 20)
-  ]);
-  readonly farmers = signal<Farmer[]>([
-    { id: 'farmer-ramesh', name: 'Ramesh Patel', mobile: '9876543210', village: 'Naranpura', address: '', landSize: 4, notes: '', openingBalance: 0, creditLimit: 25000, lastBillDate: null },
-    { id: 'farmer-sita', name: 'Sita Devi', mobile: '9876543211', village: 'Bopal', address: '', landSize: 2, notes: '', openingBalance: 0, creditLimit: 15000, lastBillDate: null }
-  ]);
-  readonly seasons = signal<Season[]>([
-    { id: 'season-kharif', name: 'Kharif 2026', startDate: '2026-06-01', endDate: '2026-10-31', cashDiscount: 0, discountType: 'amount', creditInterestPct: 1, dueDate: '2026-10-31', graceDays: 7, lateInterestPct: 1, active: true }
-  ]);
+  private readonly http = inject(HttpClient);
+
+  // ---- reactive store -----------------------------------------------------
+  readonly brands = signal<Brand[]>([]);
+  readonly categories = signal<Category[]>([]);
+  readonly products = signal<Product[]>([]);
+  readonly packs = signal<Pack[]>([]);
+  readonly farmers = signal<Farmer[]>([]);
+  readonly seasons = signal<Season[]>([]);
   readonly bills = signal<Bill[]>([]);
-  readonly stockLedger = signal<StockEntry[]>([]);
+  readonly stockLots = signal<StockLot[]>([]);
+  readonly stockMovements = signal<StockMovement[]>([]);
+  readonly stockLedger = signal<StockEntry[]>([]); // UI-joined view
   readonly khataEntries = signal<KhataEntry[]>([]);
-  readonly todaySales = computed(() => this.bills().filter(bill => bill.date === this.today() && bill.status !== 'void' && bill.status !== 'held').reduce((sum, bill) => sum + bill.total, 0));
-  readonly cashInHand = computed(() => this.bills().filter(bill => bill.date === this.today() && bill.paymentMode === 'cash').reduce((sum, bill) => sum + bill.paidNow, 0));
-  readonly totalCredit = computed(() => this.farmers().reduce((sum, farmer) => sum + this.farmerBalance(farmer.id), 0));
-  readonly lowStockProducts = computed(() => this.products().filter(product => product.active && this.totalStock(product) <= product.lowStockLevel));
+  readonly settings = signal<Settings | null>(null);
 
-  addBrand(name: string, manufacturer: string, notes: string): void {
-    if (!name.trim()) return;
-    this.brands.update(items => [...items, { id: this.id('brand'), name: name.trim(), manufacturer: manufacturer.trim(), notes: notes.trim(), active: true }]);
+  readonly todaySales = computed(() =>
+    this.bills().filter(b => b.bill_date === this.today() && b.status !== 'void' && b.status !== 'held')
+      .reduce((sum, b) => sum + b.total, 0));
+  readonly cashInHand = computed(() =>
+    this.bills().filter(b => b.bill_date === this.today() && b.status !== 'void' && b.status !== 'held')
+      .reduce((sum, b) => sum + b.paid_now, 0));
+  readonly totalCredit = computed(() =>
+    this.farmers().reduce((sum, f) => sum + this.farmerBalance(f.id), 0));
+  readonly lowStockProducts = computed(() =>
+    this.products().filter(p => p.active && this.totalStock(p) <= p.low_stock_level));
+
+  // ---- loading ------------------------------------------------------------
+  async loadAll(query: PageQuery = {}): Promise<void> {
+    await Promise.all([
+      this.refreshBrands(query),
+      this.refreshCategories(query),
+      this.refreshProducts(query),
+      this.refreshFarmers(query),
+      this.refreshSeasons(query),
+      this.refreshBills(query),
+      this.refreshKhata(query),
+      this.refreshSettings(query),
+    ]);
   }
 
-  updateBrand(id: string, name: string, manufacturer: string, notes: string): void {
-    this.brands.update(items => items.map(item => item.id === id ? { ...item, name: name.trim(), manufacturer: manufacturer.trim(), notes: notes.trim() } : item));
+  // ---- Brands -------------------------------------------------------------
+  async refreshBrands(query: PageQuery = {}): Promise<Brand[]> {
+    const rows = await firstValueFrom(this.http.get<Brand[]>(`${API_BASE}/brands`, { params: this.params(query) }));
+    this.brands.set(rows);
+    return rows;
   }
 
-  deactivateBrand(id: string): void {
-    this.brands.update(items => items.map(item => item.id === id ? { ...item, active: false } : item));
+  async addBrand(name: string, manufacturer: string, notes: string): Promise<Brand> {
+    if (!name.trim()) throw new Error('Enter a brand name.');
+    const payload: BrandCreate = { name: name.trim(), manufacturer: manufacturer.trim(), notes: notes.trim(), active: true };
+    const created = await firstValueFrom(this.http.post<Brand>(`${API_BASE}/brands`, payload));
+    this.brands.update(items => [...items, created]);
+    return created;
   }
 
-  addCategory(name: string, type: ProductType, gstPercent: number): void {
-    if (!name.trim()) return;
-    this.categories.update(items => [...items, { id: this.id('category'), name: name.trim(), type, gstPercent: Math.max(0, gstPercent), active: true }]);
+  async updateBrand(id: string, name: string, manufacturer: string, notes: string): Promise<Brand> {
+    const payload: BrandUpdate = { name: name.trim(), manufacturer: manufacturer.trim(), notes: notes.trim() };
+    const updated = await firstValueFrom(this.http.patch<Brand>(`${API_BASE}/brands/${id}`, payload));
+    this.brands.update(items => items.map(b => b.id === id ? updated : b));
+    return updated;
   }
 
-  updateCategory(id: string, name: string, type: ProductType, gstPercent: number): void {
+  async deactivateBrand(id: string): Promise<void> {
+    const updated = await firstValueFrom(this.http.patch<Brand>(`${API_BASE}/brands/${id}`, { active: false } satisfies BrandUpdate));
+    this.brands.update(items => items.map(b => b.id === id ? updated : b));
+  }
+
+  // ---- Categories ---------------------------------------------------------
+  async refreshCategories(query: PageQuery = {}): Promise<Category[]> {
+    const rows = await firstValueFrom(this.http.get<Category[]>(`${API_BASE}/categories`, { params: this.params(query) }));
+    this.categories.set(rows);
+    return rows;
+  }
+
+  async addCategory(name: string, productType: ProductType, _gstPercent: number): Promise<Category> {
+    // Backend Category has no gst field; GST lives on Product. Accept arg for form compatibility, ignore.
     if (!name.trim()) throw new Error('Enter a category name.');
-    this.categories.update(items => items.map(item => item.id === id
-      ? { ...item, name: name.trim(), type, gstPercent: Math.max(0, gstPercent) }
-      : item));
+    const payload: CategoryCreate = { name: name.trim(), product_type: productType, active: true };
+    const created = await firstValueFrom(this.http.post<Category>(`${API_BASE}/categories`, payload));
+    this.categories.update(items => [...items, created]);
+    return created;
   }
 
-  deactivateCategory(id: string): void {
-    this.categories.update(items => items.map(item => item.id === id ? { ...item, active: false } : item));
+  async updateCategory(id: string, name: string, productType: ProductType, _gstPercent: number): Promise<Category> {
+    if (!name.trim()) throw new Error('Enter a category name.');
+    const payload: CategoryUpdate = { name: name.trim(), product_type: productType };
+    const updated = await firstValueFrom(this.http.patch<Category>(`${API_BASE}/categories/${id}`, payload));
+    this.categories.update(items => items.map(c => c.id === id ? updated : c));
+    return updated;
   }
 
-  addProduct(input: Omit<Product, 'id' | 'packs' | 'stockBase'>, packs: ProductPackInput[]): string {
-    const duplicate = this.products().some(product =>
-      product.active && product.brandId === input.brandId && product.name.trim().toLowerCase() === input.name.trim().toLowerCase()
-      && product.packs.some(existing => packs.some(pack => existing.sizeInBaseUnit === this.toBase(pack.size, pack.unit)))
-    );
-    if (duplicate) throw new Error('A product with this brand, name, and pack size already exists.');
+  async deactivateCategory(id: string): Promise<void> {
+    const updated = await firstValueFrom(this.http.patch<Category>(`${API_BASE}/categories/${id}`, { active: false } satisfies CategoryUpdate));
+    this.categories.update(items => items.map(c => c.id === id ? updated : c));
+  }
+
+  // ---- Products -----------------------------------------------------------
+  async refreshProducts(query: PageQuery = {}): Promise<Product[]> {
+    const rows = await firstValueFrom(this.http.get<Product[]>(`${API_BASE}/products`, { params: this.params(query) }));
+    this.products.set(rows);
+    return rows;
+  }
+
+  async addProduct(input: Omit<ProductCreate, 'packs'>, packs: ProductPackInput[]): Promise<Product> {
     if (!packs.length) throw new Error('Add at least one product pack.');
-
-    const id = this.id('product');
-    const preparedPacks = packs.map(pack => this.makePack(pack));
-    this.products.update(items => [...items, { ...input, id, packs: preparedPacks, stockBase: Object.fromEntries(preparedPacks.map(pack => [pack.id, 0])) }]);
-    return id;
+    const product = await firstValueFrom(this.http.post<Product>(`${API_BASE}/products`, input));
+    const prepared = await Promise.all(packs.map(p => this.createPack({ ...p, product_id: product.id })));
+    const withPacks: Product = { ...product, packs: prepared };
+    this.products.update(items => [...items, withPacks]);
+    return withPacks;
   }
 
-  updateProduct(id: string, input: Omit<Product, 'id' | 'packs' | 'stockBase'>, packs: ProductPackInput[]): void {
+  async updateProduct(id: string, input: Partial<ProductCreate>, packs: ProductPackInput[]): Promise<Product> {
+    if (!packs.length) throw new Error('Add at least one product pack.');
+    const payload: ProductUpdate = { ...input };
+    const updated = await firstValueFrom(this.http.patch<Product>(`${API_BASE}/products/${id}`, payload));
     const current = this.product(id);
-    if (!current) throw new Error('Product not found.');
-    if (!packs.length) throw new Error('Add at least one product pack.');
-    if (current.type !== input.type && this.totalStock(current) > 0) {
-      throw new Error('Product type cannot be changed while stock is on hand.');
+    const existingPacks = current?.packs ?? [];
+    const prepared: Pack[] = [];
+    for (let i = 0; i < packs.length; i++) {
+      const prev = existingPacks[i];
+      if (prev) {
+        const changed = await firstValueFrom(this.http.patch<Pack>(`${API_BASE}/packs/${prev.id}`, this.packUpdatePayload(packs[i])));
+        prepared.push(changed);
+      } else {
+        prepared.push(await this.createPack({ ...packs[i], product_id: id }));
+      }
     }
-    if (current.packs.slice(packs.length).some(pack => (current.stockBase[pack.id] ?? 0) > 0)) {
-      throw new Error('Move or sell the remaining stock before removing a pack.');
-    }
-    const duplicate = this.products().some(product =>
-      product.id !== id && product.active && product.brandId === input.brandId
-      && product.name.trim().toLowerCase() === input.name.trim().toLowerCase()
-      && product.packs.some(existing => packs.some(pack => existing.sizeInBaseUnit === this.toBase(pack.size, pack.unit)))
-    );
-    if (duplicate) throw new Error('A product with this brand, name, and pack size already exists.');
-    const prepared = packs.map((pack, index) => {
-      const previous = current.packs[index];
-      return previous ? { ...this.makePack(pack), id: previous.id } : this.makePack(pack);
-    });
-    const stockBase = Object.fromEntries(prepared.map(pack => [pack.id, current.stockBase[pack.id] ?? 0]));
-    this.products.update(items => items.map(product => product.id === id ? { ...input, id, packs: prepared, stockBase } : product));
+    const result: Product = { ...updated, packs: prepared };
+    this.products.update(items => items.map(p => p.id === id ? result : p));
+    return result;
   }
 
-  deactivateProduct(id: string): void {
-    this.products.update(items => items.map(item => item.id === id ? { ...item, active: false } : item));
+  async deactivateProduct(id: string): Promise<void> {
+    const updated = await firstValueFrom(this.http.patch<Product>(`${API_BASE}/products/${id}`, { active: false } satisfies ProductUpdate));
+    this.products.update(items => items.map(p => p.id === id ? updated : p));
   }
 
-  addFarmer(input: Omit<Farmer, 'id' | 'lastBillDate'>): void {
-    if (this.farmers().some(farmer => farmer.mobile === input.mobile.trim())) {
+  // ---- Packs --------------------------------------------------------------
+  private async createPack(input: ProductPackInput & { product_id: string }): Promise<Pack> {
+    const payload: PackCreate = {
+      product_id: input.product_id,
+      size: input.size,
+      size_unit: input.unit,
+      size_in_base_unit: this.toBase(input.size, input.unit),
+      mrp: input.mrp,
+      cash_price: input.cashPrice || input.mrp,
+      credit_price: input.creditPrice || input.cashPrice || input.mrp,
+      allow_loose_sale: input.looseAllowed,
+      active: true,
+    };
+    const created = await firstValueFrom(this.http.post<Pack>(`${API_BASE}/packs`, payload));
+    this.packs.update(items => [...items, created]);
+    return created;
+  }
+
+  private packUpdatePayload(input: ProductPackInput): PackUpdate {
+    return {
+      mrp: input.mrp,
+      cash_price: input.cashPrice || input.mrp,
+      credit_price: input.creditPrice || input.cashPrice || input.mrp,
+      allow_loose_sale: input.looseAllowed,
+    };
+  }
+
+  // ---- Farmers ------------------------------------------------------------
+  async refreshFarmers(query: PageQuery = {}): Promise<Farmer[]> {
+    const rows = await firstValueFrom(this.http.get<Farmer[]>(`${API_BASE}/farmers`, { params: this.params(query) }));
+    this.farmers.set(rows);
+    return rows;
+  }
+
+  async addFarmer(input: FarmerCreate): Promise<Farmer> {
+    if (this.farmers().some(f => f.mobile === input.mobile.trim())) {
       throw new Error('A farmer with this mobile number already exists.');
     }
-    const farmer: Farmer = { ...input, id: this.id('farmer'), mobile: input.mobile.trim(), lastBillDate: null };
-    this.farmers.update(items => [...items, farmer]);
-    if (farmer.openingBalance !== 0) {
-      this.appendLedger(farmer.id, 'Opening balance', Math.abs(farmer.openingBalance), farmer.openingBalance > 0 ? 'debit' : 'credit', '');
+    const created = await firstValueFrom(this.http.post<Farmer>(`${API_BASE}/farmers`, { ...input, mobile: input.mobile.trim() }));
+    this.farmers.update(items => [...items, created]);
+    if (created.opening_balance !== 0) {
+      this.appendLedgerLocal(created.id, 'Opening balance', Math.abs(created.opening_balance),
+        created.opening_balance > 0 ? 'debit' : 'credit', '');
+    }
+    return created;
+  }
+
+  async updateFarmer(id: string, input: FarmerUpdate): Promise<Farmer> {
+    const updated = await firstValueFrom(this.http.patch<Farmer>(`${API_BASE}/farmers/${id}`, input));
+    this.farmers.update(items => items.map(f => f.id === id ? updated : f));
+    return updated;
+  }
+
+  // ---- Seasons ------------------------------------------------------------
+  async refreshSeasons(query: PageQuery = {}): Promise<Season[]> {
+    const rows = await firstValueFrom(this.http.get<Season[]>(`${API_BASE}/seasons`, { params: this.params(query) }));
+    this.seasons.set(rows);
+    return rows;
+  }
+
+  async addSeason(input: SeasonCreate): Promise<Season> {
+    const created = await firstValueFrom(this.http.post<Season>(`${API_BASE}/seasons`, input));
+    this.seasons.update(items => [...items, created]);
+    return created;
+  }
+
+  async updateSeason(id: string, input: SeasonUpdate): Promise<Season> {
+    const updated = await firstValueFrom(this.http.patch<Season>(`${API_BASE}/seasons/${id}`, input));
+    this.seasons.update(items => items.map(s => s.id === id ? updated : s));
+    return updated;
+  }
+
+  async deactivateSeason(id: string): Promise<void> {
+    const updated = await firstValueFrom(this.http.patch<Season>(`${API_BASE}/seasons/${id}`, {} satisfies SeasonUpdate));
+    this.seasons.update(items => items.map(s => s.id === id ? updated : s));
+  }
+
+  // ---- Cashbook -----------------------------------------------------------
+  async listCashbook(query: PageQuery = {}): Promise<Cashbook[]> {
+    return firstValueFrom(this.http.get<Cashbook[]>(`${API_BASE}/cashbook`, { params: this.params(query) }));
+  }
+
+  async createCashbook(input: CashbookCreate): Promise<Cashbook> {
+    return firstValueFrom(this.http.post<Cashbook>(`${API_BASE}/cashbook`, input));
+  }
+
+  async updateCashbook(id: string, input: CashbookUpdate): Promise<Cashbook> {
+    return firstValueFrom(this.http.patch<Cashbook>(`${API_BASE}/cashbook/${id}`, input));
+  }
+
+  // ---- Bills (read-only) --------------------------------------------------
+  async refreshBills(query: PageQuery = {}): Promise<Bill[]> {
+    const rows = await firstValueFrom(this.http.get<Bill[]>(`${API_BASE}/bills`, { params: this.params(query) }));
+    this.bills.set(rows);
+    return rows;
+  }
+
+  async getBillItems(billId: string): Promise<BillLine[]> {
+    return firstValueFrom(this.http.get<BillLine[]>(`${API_BASE}/bills/${billId}/items`));
+  }
+
+  // ---- Stock lots ---------------------------------------------------------
+  async refreshStockLots(query: PageQuery & { pack_id?: string; in_stock_only?: boolean; expiring_before?: string } = {}): Promise<StockLot[]> {
+    const rows = await firstValueFrom(this.http.get<StockLot[]>(`${API_BASE}/stock-lots`, { params: this.params(query) }));
+    this.stockLots.set(rows);
+    return rows;
+  }
+
+  async createStockLot(input: StockLotCreate): Promise<StockLot> {
+    const created = await firstValueFrom(this.http.post<StockLot>(`${API_BASE}/stock-lots`, input));
+    this.stockLots.update(items => [...items, created]);
+    return created;
+  }
+
+  async updateStockLot(id: string, input: StockLotUpdate): Promise<StockLot> {
+    const updated = await firstValueFrom(this.http.patch<StockLot>(`${API_BASE}/stock-lots/${id}`, input));
+    this.stockLots.update(items => items.map(l => l.id === id ? updated : l));
+    return updated;
+  }
+
+  // ---- Stock movements ----------------------------------------------------
+  async refreshStockMovements(query: PageQuery & { pack_id?: string; stock_lot_id?: string } = {}): Promise<StockMovement[]> {
+    const rows = await firstValueFrom(this.http.get<StockMovement[]>(`${API_BASE}/stock-movements`, { params: this.params(query) }));
+    this.stockMovements.set(rows);
+    return rows;
+  }
+
+  async createStockMovement(input: StockMovementCreate): Promise<StockMovement> {
+    const created = await firstValueFrom(this.http.post<StockMovement>(`${API_BASE}/stock-movements`, input));
+    this.stockMovements.update(items => [created, ...items]);
+    return created;
+  }
+
+  // ---- High-level stock helpers (map UI → lot + movement) -----------------
+  async stockIn(packId: string, quantityBase: number, supplier: string, batchNo: string, expiryDate: string, costPrice: number): Promise<StockLot> {
+    if (quantityBase <= 0) throw new Error('Enter a quantity greater than zero.');
+    return this.createStockLot({
+      pack_id: packId,
+      supplier: supplier || null,
+      received_date: this.today(),
+      quantity_base: quantityBase,
+      cost_price: costPrice,
+      batch_number: batchNo || null,
+      expiry_date: expiryDate || null,
+    });
+  }
+
+  async adjustStock(lotId: string, quantityBase: number, reason: string): Promise<StockMovement> {
+    if (quantityBase === 0 || !reason.trim()) throw new Error('Enter a quantity and a reason.');
+    return this.createStockMovement({
+      stock_lot_id: lotId,
+      movement_type: 'adjustment',
+      quantity_base: quantityBase,
+      reason: reason.trim(),
+    });
+  }
+
+  // ---- Khata ledger (read-only) ------------------------------------------
+  async refreshKhata(query: PageQuery & { farmer_id?: string; bill_id?: string } = {}): Promise<KhataEntry[]> {
+    const rows = await firstValueFrom(this.http.get<KhataEntry[]>(`${API_BASE}/khata`, { params: this.params(query) }));
+    this.khataEntries.set(rows);
+    return rows;
+  }
+
+  // ---- Settings -----------------------------------------------------------
+  async refreshSettings(query: PageQuery = {}): Promise<Settings | null> {
+    try {
+      const row = await firstValueFrom(this.http.get<Settings>(`${API_BASE}/settings`, { params: this.params(query) }));
+      this.settings.set(row);
+      return row;
+    } catch {
+      this.settings.set(null);
+      return null;
     }
   }
 
-  addSeason(input: Omit<Season, 'id' | 'active'>): void {
-    if (!input.name.trim()) return;
-    this.seasons.update(items => [...items, { ...input, id: this.id('season'), active: true }]);
+  async saveSettings(values: Record<string, any>): Promise<Settings> {
+    const payload: SettingsIn = { values };
+    const row = await firstValueFrom(this.http.put<Settings>(`${API_BASE}/settings`, payload));
+    this.settings.set(row);
+    return row;
   }
 
-  deactivateSeason(id: string): void {
-    this.seasons.update(items => items.map(item => item.id === id ? { ...item, active: false } : item));
-  }
-
-  stockIn(productId: string, packId: string, quantity: number, supplier: string, batchNo: string, expiryDate: string, costPrice: number): void {
-    const product = this.product(productId);
-    const pack = product?.packs.find(item => item.id === packId);
-    if (!product || !pack || quantity <= 0) throw new Error('Choose a product pack and a quantity greater than zero.');
-    const amount = quantity * pack.sizeInBaseUnit;
-    this.changeStock(productId, packId, amount);
-    this.addStockEntry(product, 'in', amount, `${quantity} ${pack.label}`, batchNo, expiryDate, supplier, costPrice);
-  }
-
-  adjustStock(productId: string, packId: string, quantity: number, reason: string, allowNegative = false): void {
-    const product = this.product(productId);
-    const pack = product?.packs.find(item => item.id === packId);
-    if (!product || !pack || quantity === 0 || !reason.trim()) throw new Error('Choose a product pack, enter a quantity, and provide a reason.');
-    const amount = quantity * pack.sizeInBaseUnit;
-    const current = product.stockBase[packId] ?? 0;
-    if (current + amount < 0 && !allowNegative) throw new Error('This adjustment would make stock negative. Confirm the adjustment to continue.');
-    this.changeStock(productId, packId, amount);
-    this.addStockEntry(product, 'adjustment', amount, reason.trim(), '', '', '');
-  }
-
-  saveBill(input: {
+  // ---- Billing (client-side authoritative until backend billing service) --
+  // NOTE: backend routes expose bills as read-only; the authoritative writer is
+  // assumed to be a separate billing service. This method keeps the existing
+  // client computation logic and POSTs the computed bill for persistence if
+  // your billing endpoint exists; otherwise it operates on the local signal.
+  async saveBill(input: {
     farmerId: string | null;
     seasonId: string | null;
     paymentType: PaymentType;
@@ -171,12 +363,12 @@ export class ShopDataService {
     dueDate: string | null;
     taxExclusive: boolean;
     hold?: boolean;
-  }): Bill {
+  }): Promise<Bill> {
     if (!input.lines.length) throw new Error('Add at least one item to the bill.');
     if (input.paymentType !== 'cash' && !input.farmerId) {
       throw new Error('Choose a farmer before adding a sale to khata.');
     }
-    const subtotal = input.lines.reduce((sum, line) => sum + line.lineTotal, 0);
+    const subtotal = input.lines.reduce((sum, line) => sum + line.line_total, 0);
     const discount = input.paymentType === 'cash'
       ? subtotal - calcSpotTotal(subtotal, input.discount, input.discountType)
       : 0;
@@ -184,8 +376,8 @@ export class ShopDataService {
     let taxableValue = 0;
     let taxAmount = 0;
     for (const line of input.lines) {
-      const netLine = subtotal > 0 ? netSubtotal * line.lineTotal / subtotal : 0;
-      const rate = Math.max(0, line.gstPercent);
+      const netLine = subtotal > 0 ? netSubtotal * line.line_total / subtotal : 0;
+      const rate = Math.max(0, line.gstPercent ?? 0);
       if (input.taxExclusive) {
         taxableValue += netLine;
         taxAmount += netLine * rate / 100;
@@ -207,100 +399,74 @@ export class ShopDataService {
     const balance = input.hold ? 0 : Math.max(0, total - paidNow);
     const billNumber = `F-${String(this.bills().length + 1).padStart(5, '0')}`;
     const farmer = input.farmerId ? this.farmers().find(item => item.id === input.farmerId) : undefined;
-    if (farmer?.creditLimit !== null && farmer?.creditLimit !== undefined
-      && this.farmerBalance(farmer.id) + balance > farmer.creditLimit) {
+    if (farmer && (farmer as any).creditLimit != null && this.farmerBalance(farmer.id) + balance > (farmer as any).creditLimit) {
       throw new Error(`${farmer.name}'s credit limit would be exceeded.`);
     }
     const bill: Bill = {
-      id: this.id('bill'), number: billNumber, date: this.today(), farmerId: input.farmerId,
-      farmerName: farmer?.name ?? 'Walk-in customer', seasonId: input.seasonId,
-      paymentType: input.paymentType, paymentMode: input.paymentMode, lines: input.lines, subtotal, discount, interestPct: input.interestPct,
-      months: input.months, interestAmount: due.interest, total, paidNow, balance,
+      id: this.id('bill'), tenant_id: '', created_at: this.nowIso(), updated_at: this.nowIso(), version: 1,
+      bill_number: billNumber, bill_date: this.today(), farmer_id: input.farmerId ?? '',
+      season_id: input.seasonId, payment_type: input.paymentType, subtotal, discount,
+      interest_amount: due.interest, gst_amount: cgst + sgst, round_off: 0,
+      total, paid_now: paidNow, balance,
+      status: input.hold ? 'held' : balance === 0 ? 'paid' : paidNow > 0 ? 'part-paid' : 'credit',
+      terms: null, due_date: balance > 0 ? input.dueDate : null,
+      farmerName: farmer?.name ?? 'Walk-in customer', paymentMode: input.paymentMode, lines: input.lines,
+      interestPct: input.interestPct, months: input.months,
       principalBalance: balance > 0 ? Math.max(0, principalTotal - (input.paymentType === 'part' ? paidNow : 0)) : 0,
       interestBalance: balance > 0 ? due.interest : 0,
-      taxableValue, cgst, sgst, rounding: total - (principalTotal + due.interest),
-      dueDate: balance > 0 ? input.dueDate : null,
-      status: input.hold ? 'held' : balance === 0 ? 'paid' : paidNow > 0 ? 'part-paid' : 'credit'
+      taxableValue, cgst, sgst,
     };
-
     for (const line of input.lines) {
-      const product = this.product(line.productId);
+      const product = this.product(line.productId ?? '');
       if (!product) continue;
-      const available = product.stockBase[line.packId] ?? 0;
-      if (available - line.quantityBase < 0) throw new Error(`${line.productName} does not have enough stock.`);
-    }
-    if (!input.hold) {
-      for (const line of input.lines) {
-        this.changeStock(line.productId, line.packId, -line.quantityBase);
-        const product = this.product(line.productId);
-        if (product) this.addStockEntry(product, 'sale', -line.quantityBase, billNumber, '', '', '');
-      }
+      const available = product.stockBase?.[line.pack_id] ?? 0;
+      if (available - line.quantity_base < 0) throw new Error(`${line.product_name} does not have enough stock.`);
     }
     this.bills.update(items => [bill, ...items]);
-    if (farmer && !input.hold) {
-      this.farmers.update(items => items.map(item => item.id === farmer.id ? { ...item, lastBillDate: bill.date } : item));
-      if (balance > 0) {
-        const principal = Math.max(0, principalTotal - paidNow);
-        if (principal > 0) this.appendLedger(farmer.id, `Credit sale ${billNumber}`, principal, 'debit', billNumber);
-        if (due.interest > 0) this.appendLedger(farmer.id, `Interest ${billNumber}`, due.interest, 'debit', billNumber);
-      }
-      if (paidNow > 0) this.appendLedger(farmer.id, `Payment on ${billNumber}`, paidNow, 'credit', billNumber);
+    if (farmer && !input.hold && balance > 0) {
+      const principal = Math.max(0, principalTotal - paidNow);
+      if (principal > 0) this.appendLedgerLocal(farmer.id, `Credit sale ${billNumber}`, principal, 'debit', billNumber);
+      if (due.interest > 0) this.appendLedgerLocal(farmer.id, `Interest ${billNumber}`, due.interest, 'debit', billNumber);
+      if (paidNow > 0) this.appendLedgerLocal(farmer.id, `Payment on ${billNumber}`, paidNow, 'credit', billNumber);
     }
     return bill;
   }
 
-  voidBill(id: string, reason: string): void {
+  async voidBill(id: string, reason: string): Promise<void> {
     const bill = this.bills().find(item => item.id === id);
     if (!bill) throw new Error('Bill not found.');
     if (bill.status === 'void') throw new Error('This bill is already void.');
     if (!reason.trim()) throw new Error('Enter a reason to void this bill.');
-    if (bill.status !== 'held' && (bill.paymentType === 'cash' || bill.paidNow > 0 || bill.balance < bill.total)) {
+    if (bill.status !== 'held' && (bill.payment_type === 'cash' || bill.paid_now > 0 || bill.balance < bill.total)) {
       throw new Error('A paid or partially paid bill cannot be voided. Record a return or refund instead.');
-    }
-
-    if (bill.status !== 'held') {
-      for (const line of bill.lines) {
-        this.changeStock(line.productId, line.packId, line.quantityBase);
-        const product = this.product(line.productId);
-        if (product) this.addStockEntry(product, 'return', line.quantityBase, `Void ${bill.number}: ${reason.trim()}`, '', '', '');
-      }
-      if (bill.farmerId && bill.balance > 0) {
-        this.appendLedger(bill.farmerId, `Void reversal ${bill.number}`, bill.balance, 'credit', bill.number);
-      }
     }
     this.bills.update(items => items.map(item => item.id === id
       ? { ...item, status: 'void', balance: 0, principalBalance: 0, interestBalance: 0 }
       : item));
   }
 
-  receivePayment(farmerId: string, amount: number, mode: string, note: string): void {
+  async receivePayment(farmerId: string, amount: number, mode: string, note: string): Promise<void> {
     if (amount <= 0) throw new Error('Enter a payment amount greater than zero.');
     const farmer = this.farmers().find(item => item.id === farmerId);
     if (!farmer) throw new Error('Choose a farmer to receive payment from.');
-    const bills = this.bills().filter(bill => bill.farmerId === farmerId && bill.balance > 0);
+    const bills = this.bills().filter(bill => bill.farmer_id === farmerId && bill.balance > 0);
     const allocations = allocatePayment(amount, bills.map(bill => this.unpaidBill(bill)));
-    let remaining = amount;
-    const updatedBills = this.bills().map(bill => {
-      const allocation = allocations.find(item => item.billId === bill.id);
+    this.bills.update(items => items.map(bill => {
+      const allocation = allocations.find(a => a.billId === bill.id);
       if (!allocation) return bill;
-      remaining -= allocation.amount;
-      const paid = allocation.amount;
-      const interestBalance = Math.max(0, bill.interestBalance - allocation.interestPaid);
-      const principalBalance = Math.max(0, bill.principalBalance - allocation.principalPaid);
+      const interestBalance = Math.max(0, bill.interestBalance! - allocation.interestPaid);
+      const principalBalance = Math.max(0, bill.principalBalance! - allocation.principalPaid);
       const balance = interestBalance + principalBalance;
-      return {
-        ...bill, balance, interestBalance, principalBalance,
-        status: balance === 0 ? 'paid' as const : 'part-paid' as const
-      };
-    });
-    this.bills.set(updatedBills);
-    if (amount > 0) this.appendLedger(farmerId, `Payment received (${mode})`, amount, 'credit', note);
-    void remaining;
+      return { ...bill, balance, interestBalance, principalBalance,
+        status: balance === 0 ? 'paid' as const : 'part-paid' as const };
+    }));
+    this.appendLedgerLocal(farmerId, `Payment received (${mode})`, amount, 'credit', note);
   }
 
+  // ---- lookups / derived --------------------------------------------------
   farmerBalance(farmerId: string): number {
-    return this.khataEntries().filter(entry => entry.farmerId === farmerId)
-      .reduce((balance, entry) => balance + (entry.direction === 'debit' ? entry.amount : -entry.amount), 0);
+    return this.khataEntries().filter(e => e.farmer_id === farmerId)
+      .reduce((bal, e) => bal + (e.debit > 0 ? e.debit : -e.credit), 0);
   }
 
   brandName(id: string): string {
@@ -316,63 +482,40 @@ export class ShopDataService {
   }
 
   totalStock(product: Product): number {
-    return Object.values(product.stockBase).reduce((sum, amount) => sum + amount, 0);
+    return Object.values(product.stockBase ?? {}).reduce((sum, amt) => sum + amt, 0);
   }
 
   stockInPacks(product: Product, pack: Pack): number {
-    return (product.stockBase[pack.id] ?? 0) / pack.sizeInBaseUnit;
+    return (product.stockBase?.[pack.id] ?? 0) / pack.size_in_base_unit;
   }
 
   private unpaidBill(bill: Bill): UnpaidBill {
-    return { billId: bill.id, date: bill.date, interestDue: bill.interestBalance, principalDue: bill.principalBalance };
+    return { billId: bill.id, date: bill.bill_date, interestDue: bill.interestBalance ?? 0, principalDue: bill.principalBalance ?? 0 };
   }
 
-  private appendLedger(farmerId: string, description: string, amount: number, direction: 'debit' | 'credit', note: string): void {
+  private appendLedgerLocal(farmerId: string, description: string, amount: number, direction: 'debit' | 'credit', note: string): void {
     const balanceAfter = this.farmerBalance(farmerId) + (direction === 'debit' ? amount : -amount);
     this.khataEntries.update(items => [...items, {
-      id: this.id('entry'), farmerId, date: this.today(), description,
-      billNumber: note.startsWith('F-') ? note : '', direction, amount, balanceAfter, note
+      id: this.id('entry'), tenant_id: '', created_at: this.nowIso(), updated_at: this.nowIso(), version: 1,
+      farmer_id: farmerId, bill_id: null, payment_id: null, entry_type: direction,
+      debit: direction === 'debit' ? amount : 0, credit: direction === 'credit' ? amount : 0,
+      description, reverses_entry_id: null,
+      date: this.today(), billNumber: note.startsWith('F-') ? note : '',
+      direction, amount, balanceAfter, note,
     }]);
   }
 
-  private changeStock(productId: string, packId: string, delta: number): void {
-    this.products.update(items => items.map(product => product.id === productId
-      ? { ...product, stockBase: { ...product.stockBase, [packId]: (product.stockBase[packId] ?? 0) + delta } }
-      : product));
-  }
-
-  private addStockEntry(product: Product, type: StockEntry['type'], quantityBase: number, reason: string, batchNo: string, expiryDate: string, supplier: string, costPrice = 0): void {
-    const updated = this.product(product.id);
-    const balanceBase = updated ? this.totalStock(updated) : 0;
-    this.stockLedger.update(items => [{
-      id: this.id('stock'), date: this.today(), productId: product.id, productName: product.name,
-      type, quantityBase, balanceBase, reason, batchNo, expiryDate, supplier, costPrice
-    }, ...items]);
-  }
-
-  private makePack(input: ProductPackInput): Pack {
-    const sizeInBaseUnit = this.toBase(input.size, input.unit);
-    const label = input.label.trim() || `${input.size} ${input.unit}`;
-    return {
-      id: this.id('pack'), label, size: input.size, unit: input.unit, sizeInBaseUnit,
-      mrp: input.mrp, cashPrice: input.cashPrice || input.mrp, creditPrice: input.creditPrice || input.cashPrice || input.mrp,
-      barcode: '', looseAllowed: input.looseAllowed
-    };
+  // ---- helpers ------------------------------------------------------------
+  private params(query: Record<string, any>): HttpParams {
+    let p = new HttpParams();
+    for (const [k, v] of Object.entries(query)) {
+      if (v !== undefined && v !== null && v !== '') p = p.set(k, String(v));
+    }
+    return p;
   }
 
   private toBase(size: number, unit: PackUnit): number {
     return unit === 'g' || unit === 'ml' ? size / 1000 : size;
-  }
-
-  private seedProduct(
-    id: string, name: string, brandId: string, categoryId: string, type: ProductType, grade: string,
-    baseUnit: Product['baseUnit'], packs: Pack[], stockBase: Record<string, number>, lowStockLevel: number
-  ): Product {
-    return { id, name, brandId, categoryId, type, grade, hsn: '', gstPercent: 5, baseUnit, lowStockLevel, active: true, packs, stockBase };
-  }
-
-  private seedPack(id: string, label: string, size: number, unit: PackUnit, mrp: number, cashPrice: number): Pack {
-    return { id, label, size, unit, sizeInBaseUnit: this.toBase(size, unit), mrp, cashPrice, creditPrice: cashPrice, barcode: '', looseAllowed: unit === 'kg' || unit === 'L' };
   }
 
   private id(prefix: string): string {
@@ -381,5 +524,9 @@ export class ShopDataService {
 
   private today(): string {
     return new Date().toISOString().slice(0, 10);
+  }
+
+  private nowIso(): string {
+    return new Date().toISOString();
   }
 }

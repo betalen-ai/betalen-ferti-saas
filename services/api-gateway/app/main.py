@@ -19,6 +19,7 @@ SERVICES = {
     "org_users": os.getenv("ORG_SERVICE_URL", "http://beta_organization:8001"),
     "roles": os.getenv("ORG_SERVICE_URL", "http://beta_organization:8001"),
     "subscriptions": os.getenv("ORG_SERVICE_URL", "http://beta_organization:8001"),
+    "brands": os.getenv("ORG_SERVICE_URL", "http://beta_organization:8001"),
     "invoices": os.getenv("BILLING_SERVICE_URL", "http://beta_billing:8002"),
     "payments": os.getenv("BILLING_SERVICE_URL", "http://beta_billing:8002"),
     "credit_ledger": os.getenv("BILLING_SERVICE_URL", "http://beta_billing:8002"),
@@ -32,13 +33,17 @@ HOP_BY_HOP_HEADERS = {
     "te", "trailers", "transfer-encoding", "upgrade", "host", "content-length"
 }
 
+@app.api_route("/api/v1/{service}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
 @app.api_route("/api/v1/{service}/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
-async def reverse_proxy(service: str, path: str, request: Request):
+async def reverse_proxy(service: str, request: Request, path: str = ""):
     if service not in SERVICES:
         raise HTTPException(status_code=404, detail=f"Unknown service route: {service}")
         
     target_base_url = SERVICES[service]
-    url = f"{target_base_url}/api/v1/{service}/{path}"
+    service_path = f"/api/v1/{service}"
+    if path:
+        service_path = f"{service_path}/{path}"
+    url = f"{target_base_url}{service_path}"
     
     headers = {k: v for k, v in request.headers.items() if k.lower() not in HOP_BY_HOP_HEADERS}
 

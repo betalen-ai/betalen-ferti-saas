@@ -44,6 +44,8 @@ class Brand(TenantRecord, Base):
     )
 
     name: Mapped[str] = mapped_column(String(120), nullable=False)
+    manufacturer: Mapped[str] = mapped_column(String(180), nullable=False, default="", server_default="")
+    notes: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
 
 

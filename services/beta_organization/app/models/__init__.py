@@ -4,5 +4,6 @@ from app.models.role import Role
 from app.models.permission import Permission, RolePermission
 from app.models.org_user import OrgUser
 from app.models.subscription import Subscription
+from app.models.ferti import Brand
 
-__all__ = ["Base", "Tenant", "Role", "Permission", "RolePermission", "OrgUser", "Subscription"]
+__all__ = ["Base", "Tenant", "Role", "Permission", "RolePermission", "OrgUser", "Subscription", "Brand"]
