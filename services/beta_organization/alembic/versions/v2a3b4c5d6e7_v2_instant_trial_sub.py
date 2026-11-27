@@ -51,10 +51,19 @@ def upgrade() -> None:
         created_at TIMESTAMPTZ DEFAULT NOW()
     )
     """)
-    op.execute("INSERT INTO org.subscription_plans (code, name, max_staff, features) VALUES ('TRIAL', 'Free Trial', 2, '{\"billing\":true,\"inventory\":true,\"farmers\":true,\"khata\":true,\"reports\":true,\"exports\":true}') ON CONFLICT DO NOTHING")
-    op.execute("INSERT INTO org.subscription_plans (code, name, max_staff, features) VALUES ('BASIC', 'Basic', 3, '{\"billing\":true,\"inventory\":true,\"farmers\":true,\"khata\":true,\"reports\":true,\"exports\":true}') ON CONFLICT DO NOTHING")
-    op.execute("INSERT INTO org.subscription_plans (code, name, max_staff, features) VALUES ('STANDARD', 'Standard', 10, '{\"billing\":true,\"inventory\":true,\"farmers\":true,\"khata\":true,\"reports\":true,\"exports\":true,\"multi_user\":true}') ON CONFLICT DO NOTHING")
-    op.execute("INSERT INTO org.subscription_plans (code, name, max_staff, features) VALUES ('PREMIUM', 'Premium', 999, '{\"billing\":true,\"inventory\":true,\"farmers\":true,\"khata\":true,\"reports\":true,\"exports\":true,\"multi_user\":true,\"whatsapp\":true,\"multi_branch\":true,\"advanced_reports\":true}') ON CONFLICT DO NOTHING")
+    bind = op.get_bind()
+    bind.exec_driver_sql(
+        """INSERT INTO org.subscription_plans (code, name, max_staff, features) VALUES ('TRIAL', 'Free Trial', 2, '{"billing":true,"inventory":true,"farmers":true,"khata":true,"reports":true,"exports":true}') ON CONFLICT DO NOTHING"""
+    )
+    bind.exec_driver_sql(
+        """INSERT INTO org.subscription_plans (code, name, max_staff, features) VALUES ('BASIC', 'Basic', 3, '{"billing":true,"inventory":true,"farmers":true,"khata":true,"reports":true,"exports":true}') ON CONFLICT DO NOTHING"""
+    )
+    bind.exec_driver_sql(
+        """INSERT INTO org.subscription_plans (code, name, max_staff, features) VALUES ('STANDARD', 'Standard', 10, '{"billing":true,"inventory":true,"farmers":true,"khata":true,"reports":true,"exports":true,"multi_user":true}') ON CONFLICT DO NOTHING"""
+    )
+    bind.exec_driver_sql(
+        """INSERT INTO org.subscription_plans (code, name, max_staff, features) VALUES ('PREMIUM', 'Premium', 999, '{"billing":true,"inventory":true,"farmers":true,"khata":true,"reports":true,"exports":true,"multi_user":true,"whatsapp":true,"multi_branch":true,"advanced_reports":true}') ON CONFLICT DO NOTHING"""
+    )
     # subscription events audit
     op.execute("""
     CREATE TABLE IF NOT EXISTS org.subscription_events (

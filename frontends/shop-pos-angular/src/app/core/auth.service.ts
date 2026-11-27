@@ -126,6 +126,7 @@ export class AuthService {
   readonly authenticated = signal(false);
   readonly profile = signal<OwnerProfile | null>(null);
   readonly role = signal<string | null>(null);
+  readonly tenantId = signal<string | null>(null);
 
   private phoneVerifiedToken: string | null = null;
   private googleRegistrationToken: string | null = null;
@@ -500,6 +501,7 @@ export class AuthService {
     this.authenticated.set(false);
     this.profile.set(null);
     this.role.set(null);
+    this.tenantId.set(null);
     this.subscription.reset();
     this.tenant.reset();
 
@@ -514,6 +516,7 @@ export class AuthService {
 
     const claims = decodeClaims(r.access_token);
     this.role.set(claims['role'] ?? null);
+    this.tenantId.set(typeof claims['tid'] === 'string' ? claims['tid'] : null);
     this.subscription.update(
       r.subscription_status,
       r.subscription_days_left

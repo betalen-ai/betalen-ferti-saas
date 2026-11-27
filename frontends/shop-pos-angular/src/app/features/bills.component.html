@@ -1,0 +1,48 @@
+<header class="page-heading">
+  <div>
+    <span class="eyebrow">SALES RECORDS</span>
+    <h1>Bills</h1>
+    <p>Review completed sales and outstanding customer credit.</p>
+  </div>
+  <a class="btn btn-primary primary-action" routerLink="/app/pos"><i class="bi bi-cart-plus"></i> New Sale</a>
+</header>
+
+<section class="panel table-panel">
+  <div class="panel-title">
+    <h2>Bill register</h2>
+    <span>{{ billService.bills().length }} bills</span>
+  </div>
+
+  <p class="error" *ngIf="feedback">{{ feedback }}</p>
+
+  <div class="table-wrap" *ngIf="billService.bills().length; else noBills">
+    <table>
+      <thead>
+        <tr>
+          <th>Bill number</th><th>Date</th><th>Farmer</th><th>Payment / status</th>
+          <th>Total</th><th>Paid now</th><th>Balance</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let bill of billService.bills(); trackBy: trackById">
+          <td><b>{{ bill.bill_number }}</b></td>
+          <td>{{ bill.bill_date | date:'dd MMM yyyy' }}</td>
+          <td>{{ customerName(bill) }}</td>
+          <td>{{ bill.payment_type }} · {{ bill.status }}</td>
+          <td>{{ bill.total | currency:'INR':'symbol':'1.0-0':'en-IN' }}</td>
+          <td>{{ bill.paid_now | currency:'INR':'symbol':'1.0-0':'en-IN' }}</td>
+          <td [class.danger]="bill.balance > 0">{{ bill.balance | currency:'INR':'symbol':'1.0-0':'en-IN' }}</td>
+          <td>
+            <div class="row-actions">
+              <button type="button" class="btn secondary-action" (click)="print(bill, 'a4')">Print A4</button>
+              <button type="button" class="btn secondary-action" (click)="print(bill, 'thermal')">Print 80mm</button>
+              <button *ngIf="canShare(bill)" type="button" class="btn secondary-action" (click)="share(bill)">Share WhatsApp</button>
+              <button *ngIf="canVoid(bill)" type="button" class="btn danger-button" (click)="void(bill)">Void bill</button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <ng-template #noBills><p class="empty">No bills yet. Start a sale to create your first bill.</p></ng-template>
+</section>

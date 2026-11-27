@@ -1,4 +1,6 @@
-import { PaymentAllocation } from '../models/shop.models';
+// import { PaymentAllocation } from '../models/shop.models';
+
+import { PaymentAllocation } from "../models";
 
 export interface CreditTotal {
   principal: number;
