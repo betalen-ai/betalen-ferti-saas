@@ -1,0 +1,131 @@
+<header class="page-heading">
+  <div>
+    <span class="eyebrow">POINT OF SALE</span>
+    <h1>New sale</h1>
+    <p>Add products, choose payment terms, and create a bill.</p>
+  </div>
+  <a class="btn secondary-action" routerLink="/app/bills"><i class="bi bi-receipt"></i> Bills</a>
+</header>
+
+<div class="pos-layout">
+  <section class="panel pos-catalog">
+    <div class="panel-title">
+      <h2>Products</h2>
+      <label class="search"><i class="bi bi-search"></i><input [(ngModel)]="productSearch" placeholder="Search products"></label>
+    </div>
+
+    <div class="product-tiles">
+      <article class="product-tile" *ngFor="let option of filteredPackOptions(); trackBy: trackByPack"
+               [class.out]="!inStock(option.product, option.pack)">
+        <b>{{ option.product.name }}</b>
+        <span>{{ packLabel(option.pack) }}</span>
+        <strong>{{ priceOf(option.pack) | currency:'INR':'symbol':'1.0-0':'en-IN' }}</strong>
+        <small>{{ inStock(option.product, option.pack)
+                  ? ('Stock ' + (productService.stockInPacks(option.product, option.pack) | number:'1.0-1'))
+                  : 'Out of stock' }}</small>
+        <div class="tile-actions">
+          <button type="button" class="btn secondary-action" [disabled]="!inStock(option.product, option.pack)"
+                  (click)="addToCart(option.product.id, option.pack.id)">Add pack</button>
+          <button *ngIf="option.pack.allow_loose_sale" type="button" class="btn secondary-action"
+                  [disabled]="!looseAvailable(option.product, option.pack)"
+                  (click)="addToCart(option.product.id, option.pack.id, true)">Add loose {{ baseUnitOf(option.product) }}</button>
+        </div>
+      </article>
+    </div>
+    <p *ngIf="!filteredPackOptions().length" class="empty">No matching products. Add active products in Product Catalog.</p>
+  </section>
+
+  <section class="panel bill-builder">
+    <div class="panel-title"><h2>Current bill</h2><span class="bill-number">New bill</span></div>
+
+    <label>Farmer / customer</label>
+    <select class="form-select" [(ngModel)]="farmerId">
+      <option value="">Walk-in customer</option>
+      <option *ngFor="let farmer of farmerService.farmers(); trackBy: trackById" [value]="farmer.id">{{ farmer.name }} · {{ farmer.mobile }}</option>
+    </select>
+    <p class="farmer-info" *ngIf="selectedFarmer()">
+      Outstanding {{ farmerOutstanding() | currency:'INR':'symbol':'1.0-0':'en-IN' }}
+      <ng-container *ngIf="creditLeft() !== null"> · credit left {{ creditLeft() | currency:'INR':'symbol':'1.0-0':'en-IN' }}</ng-container>
+    </p>
+
+    <label>Season</label>
+    <select class="form-select" [(ngModel)]="seasonId" (ngModelChange)="seasonChanged($event)">
+      <option value="">No season</option>
+      <option *ngFor="let season of activeSeasons(); trackBy: trackById" [value]="season.id">{{ season.name }}</option>
+    </select>
+
+    <div class="cart-lines" *ngIf="cart.length; else emptyCart">
+      <div class="cart-line" *ngFor="let line of cart; let i = index; trackBy: trackByIndex">
+        <div><b>{{ line.product_name }}</b><small>{{ line.pack_name }}</small></div>
+        <div class="quantity">
+          <button type="button" aria-label="Decrease quantity" (click)="changeCartQuantity(i, -1)">−</button>
+          <span>{{ line.quantity }}</span>
+          <button type="button" aria-label="Increase quantity" (click)="changeCartQuantity(i, 1)">+</button>
+        </div>
+        <strong>{{ line.line_total | currency:'INR':'symbol':'1.0-0':'en-IN' }}</strong>
+        <button type="button" class="remove" aria-label="Remove item" (click)="removeLine(i)"><i class="bi bi-x-lg"></i></button>
+      </div>
+    </div>
+    <ng-template #emptyCart><p class="empty cart-empty">Choose product packs to add them to the bill.</p></ng-template>
+
+    <div class="bill-options">
+      <label>Payment type
+        <select class="form-select" [(ngModel)]="paymentType" (ngModelChange)="paymentChanged($event)">
+          <option value="cash">Paid on the spot</option>
+          <option value="credit">Credit / khata</option>
+          <option value="part">Part payment</option>
+        </select>
+      </label>
+      <label *ngIf="paymentType !== 'credit'">Paid using
+        <select class="form-select" [(ngModel)]="paymentMode">
+          <option value="cash">Cash</option>
+          <option value="UPI">UPI</option>
+          <option value="card">Card</option>
+        </select>
+      </label>
+      <label *ngIf="paymentType === 'cash'">Discount type
+        <select class="form-select" [(ngModel)]="discountType">
+          <option value="amount">Fixed amount (₹)</option>
+          <option value="percent">Percent (%)</option>
+        </select>
+      </label>
+      <label *ngIf="paymentType === 'cash'">Discount
+        <input class="form-control" type="number" min="0" [(ngModel)]="discount">
+      </label>
+      <label *ngIf="paymentType !== 'cash'">Interest per month (%)
+        <input class="form-control" type="number" min="0" step="0.1" [(ngModel)]="interestPct">
+      </label>
+      <label *ngIf="paymentType !== 'cash'">Months
+        <input class="form-control" type="number" min="0" step="0.1" [(ngModel)]="months">
+      </label>
+      <label *ngIf="paymentType !== 'cash'">Due date
+        <input class="form-control" type="date" [(ngModel)]="dueDate">
+      </label>
+      <label *ngIf="paymentType === 'part'">Paid now
+        <input class="form-control" type="number" min="0" [max]="total" [(ngModel)]="paidNow">
+      </label>
+    </div>
+
+    <div class="totals">
+      <div><span>Subtotal</span><b>{{ subtotal | currency:'INR':'symbol':'1.0-0':'en-IN' }}</b></div>
+      <div *ngIf="paymentType === 'cash'"><span>Discount</span><b>−{{ spotDiscount | currency:'INR':'symbol':'1.0-0':'en-IN' }}</b></div>
+      <div><span>Taxable value</span><b>{{ taxableValue | currency:'INR':'symbol':'1.2-2':'en-IN' }}</b></div>
+      <div><span>CGST / SGST</span><b>{{ cgst | currency:'INR':'symbol':'1.2-2':'en-IN' }} / {{ sgst | currency:'INR':'symbol':'1.2-2':'en-IN' }}</b></div>
+      <div *ngIf="paymentType !== 'cash'"><span>Interest ({{ interestPct }}% × {{ months }} months)</span><b>{{ creditInterest | currency:'INR':'symbol':'1.0-0':'en-IN' }}</b></div>
+      <div class="grand-total"><span>Total payable</span><b>{{ total | currency:'INR':'symbol':'1.0-0':'en-IN' }}</b></div>
+      <div><span>Rounding</span><b>{{ rounding | currency:'INR':'symbol':'1.0-0':'en-IN' }}</b></div>
+      <div *ngIf="paymentType !== 'credit'"><span>Paid now</span><b>{{ (paymentType === 'cash' ? total : boundedPaidNow) | currency:'INR':'symbol':'1.0-0':'en-IN' }}</b></div>
+      <div *ngIf="paymentType !== 'cash'"><span>Balance to khata</span><b>{{ balance | currency:'INR':'symbol':'1.0-0':'en-IN' }}</b></div>
+    </div>
+
+    <p class="warn" *ngIf="needsFarmer">Choose a farmer to add this sale to khata.</p>
+    <p class="warn" *ngIf="overCreditLimit">This sale would exceed the farmer's credit limit.</p>
+    <p class="error" *ngIf="feedback">{{ feedback }}</p>
+
+    <div class="bill-actions">
+      <button class="btn btn-primary primary-action" type="button" [disabled]="!canSave" (click)="saveSale(false)"><i class="bi bi-check2-circle"></i> Save bill</button>
+      <button class="btn secondary-action" type="button" [disabled]="!cart.length" (click)="saveSale(true)">Hold bill</button>
+      <button class="btn danger-button" type="button" (click)="cancelDraft()">Cancel draft</button>
+    </div>
+  </section>
+</div>

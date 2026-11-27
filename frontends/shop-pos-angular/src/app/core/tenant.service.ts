@@ -1,13 +1,8 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { ApiService } from './api.service';
 import { SubscriptionService } from './subscription.service';
+import { Tenant } from '../models/tenant.model';
 
-export interface Tenant {
-  id: string;
-  name: string;
-  gstin: string;
-  status: string;
-}
 
 @Injectable({ providedIn: 'root' })
 export class TenantService {

@@ -1,0 +1,63 @@
+<header class="page-heading">
+  <div>
+    <span class="eyebrow">CUSTOMERS</span>
+    <h1>Farmers</h1>
+    <p>Keep customer contacts, opening balances and credit limits together.</p>
+  </div>
+</header>
+
+<section class="panel form-panel">
+  <div class="panel-title"><h2>Add farmer</h2></div>
+
+  <div class="form-grid three">
+    <label>Name<input class="form-control" [(ngModel)]="farmerName" placeholder="Full name"></label>
+    <label>Mobile<input class="form-control" type="tel" maxlength="10" [(ngModel)]="farmerMobile" placeholder="10-digit number"></label>
+    <label>Village<input class="form-control" [(ngModel)]="farmerVillage"></label>
+    <label>Address<input class="form-control" [(ngModel)]="farmerAddress"></label>
+    <label>Land size (acres)<input class="form-control" type="number" min="0" [(ngModel)]="farmerLand"></label>
+    <label>Credit limit (₹)<input class="form-control" type="number" min="0" [(ngModel)]="farmerCreditLimit"></label>
+    <label>Opening balance (₹)<input class="form-control" type="number" [(ngModel)]="farmerOpening"></label>
+    <label class="wide">Notes<input class="form-control" [(ngModel)]="farmerNotes" placeholder="Optional details"></label>
+  </div>
+
+  <p class="warn" *ngIf="duplicateMobile">A farmer with this mobile number already exists.</p>
+  <p class="error" *ngIf="feedback">{{ feedback }}</p>
+
+  <button type="button" class="btn btn-primary primary-action" [disabled]="!canSaveFarmer" (click)="saveFarmer()">
+    <i class="bi bi-person-plus"></i> Add farmer
+  </button>
+</section>
+
+<section class="panel table-panel">
+  <div class="panel-title">
+    <h2>Farmer directory</h2>
+    <div class="filters">
+      <input class="form-control" [(ngModel)]="farmerSearch" placeholder="Search farmers">
+      <label class="filter-check"><input type="checkbox" [(ngModel)]="duesOnly"> Has dues</label>
+      <label class="filter-check"><input type="checkbox" [(ngModel)]="overdueOnly"> Overdue</label>
+    </div>
+  </div>
+
+  <div class="table-wrap" *ngIf="filteredFarmers().length; else noFarmers">
+    <table>
+      <thead>
+        <tr><th>Farmer</th><th>Village</th><th>Mobile</th><th>Outstanding</th><th>Last bill</th><th></th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let farmer of filteredFarmers(); trackBy: trackById">
+          <td><b>{{ farmer.name }}</b></td>
+          <td>{{ farmer.village || '—' }}</td>
+          <td>{{ farmer.mobile }}</td>
+          <td [class.danger]="farmerOverdue(farmer.id)">
+            {{ khataService.farmerBalance(farmer.id) | currency:'INR':'symbol':'1.0-0':'en-IN' }}
+          </td>
+          <td>{{ farmer.lastBillDate ? (farmer.lastBillDate | date:'dd MMM yyyy') : '—' }}</td>
+          <td>
+            <a class="btn secondary-action" routerLink="/app/khata" [queryParams]="{ farmer: farmer.id }">View khata</a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <ng-template #noFarmers><p class="empty">No matching farmers found.</p></ng-template>
+</section>
