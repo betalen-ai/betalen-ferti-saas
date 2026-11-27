@@ -1,1 +1,0 @@
-ALTER TABLE public.subscriptions ADD COLUMN tenant_name TEXT NOT NULL DEFAULT '';

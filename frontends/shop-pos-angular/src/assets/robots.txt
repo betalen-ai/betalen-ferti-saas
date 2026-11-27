@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://ferti.in/sitemap.xml
