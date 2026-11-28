@@ -18,6 +18,7 @@ export class StockPageComponent {
   readonly productService = inject(ProductService);
   private readonly notice = inject(NoticeService);
 
+  showForm = false;
   stockMode: 'in' | 'adjustment' = 'in';
   stockProductId = '';
   stockPackId = '';
@@ -43,6 +44,30 @@ export class StockPageComponent {
     if (product.unit_type === 'Liquid' || product.unit_type === 'L') return 'L';
     if (product.unit_type === 'Item' || product.unit_type === 'piece') return 'piece';
     return 'kg';
+  }
+
+  openStockForm(): void {
+    this.resetStockForm();
+    this.showForm = true;
+  }
+
+  closeForm(): void {
+    this.resetStockForm();
+    this.showForm = false;
+  }
+
+  resetStockForm(): void {
+    this.stockMode = 'in';
+    this.stockProductId = '';
+    this.stockPackId = '';
+    this.stockLotId = '';
+    this.stockQuantity = 1;
+    this.stockCost = 0;
+    this.stockSupplier = '';
+    this.stockBatch = '';
+    this.stockExpiry = '';
+    this.stockReason = '';
+    this.feedback = '';
   }
 
   syncStockPack(): void {
@@ -75,11 +100,7 @@ export class StockPageComponent {
         await this.stockService.adjustStock(this.stockLotId, quantityBase, this.stockReason);
       }
       this.notice.show('Stock movement recorded.');
-      this.stockQuantity = 1;
-      this.stockReason = '';
-      this.stockBatch = '';
-      this.stockExpiry = '';
-      this.stockSupplier = '';
+      this.closeForm();
     } catch (error) {
       this.feedback = error instanceof Error ? error.message : 'Could not record stock movement.';
     }

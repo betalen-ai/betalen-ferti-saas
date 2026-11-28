@@ -4,23 +4,70 @@
     <h1>Settings</h1>
     <p>Update shop identity, tax preferences and your account details.</p>
   </div>
+  <button
+    *ngIf="!showForm"
+    type="button"
+    class="btn btn-primary primary-action add-btn"
+    (click)="openEditForm()">
+    <i class="bi bi-pencil-square"></i> Edit Settings
+  </button>
 </header>
 
-<section class="panel form-panel">
-  <div class="panel-title"><h2>Shop profile</h2></div>
-  <div class="form-grid">
-    <label>Shop name<input class="form-control" [(ngModel)]="settingsShopName"></label>
-    <label>GSTIN<input class="form-control" [(ngModel)]="settingsGstin" placeholder="Optional"></label>
-    <label class="wide">Shop address<textarea class="form-control" rows="3" [(ngModel)]="settingsAddress"></textarea></label>
-  </div>
-  <p class="error" *ngIf="feedback">{{ feedback }}</p>
-  <button type="button" class="btn btn-primary primary-action" (click)="saveSettings()">Save settings</button>
-</section>
+<!-- Edit Screen -->
+<ng-container *ngIf="showForm">
+  <section class="panel form-panel">
+    <div class="panel-title">
+      <h2>Edit shop profile</h2>
+      <button type="button" class="btn secondary-action" (click)="closeForm()">
+        <i class="bi bi-arrow-left"></i> Back
+      </button>
+    </div>
 
-<section class="panel form-panel">
-  <div class="panel-title"><h2>Tax and data</h2></div>
-  <label class="settings-toggle">
-    <input type="checkbox" [(ngModel)]="taxExclusive"> Prices are tax-exclusive (default is tax-inclusive)
-  </label>
-  <p class="hint">Tax settings are saved with your shop settings. Product GST rates are configured per product in Product Catalog.</p>
+    <div class="form-grid">
+      <label>Shop name<input class="form-control" [(ngModel)]="settingsShopName"></label>
+      <label>GSTIN<input class="form-control" [(ngModel)]="settingsGstin" placeholder="Optional"></label>
+      <label class="wide">Shop address<textarea class="form-control" rows="3" [(ngModel)]="settingsAddress"></textarea></label>
+    </div>
+  </section>
+
+  <section class="panel form-panel">
+    <div class="panel-title"><h2>Tax and data</h2></div>
+    <label class="settings-toggle">
+      <input type="checkbox" [(ngModel)]="taxExclusive"> Prices are tax-exclusive (default is tax-inclusive)
+    </label>
+    <p class="hint">Tax settings are saved with your shop settings. Product GST rates are configured per product in Product Catalog.</p>
+
+    <p class="error" *ngIf="feedback">{{ feedback }}</p>
+
+    <div class="button-row">
+      <button type="button" class="btn btn-primary primary-action" (click)="saveSettings()">Save settings</button>
+      <button type="button" class="btn secondary-action" (click)="closeForm()">Cancel</button>
+    </div>
+  </section>
+</ng-container>
+
+<!-- Summary View (displayed first) -->
+<section class="panel table-panel" *ngIf="!showForm">
+  <div class="panel-title">
+    <h2>Shop profile &amp; preferences</h2>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-item">
+      <span class="label">Shop name</span>
+      <strong>{{ settingsShopName || '—' }}</strong>
+    </div>
+    <div class="summary-item">
+      <span class="label">GSTIN</span>
+      <strong>{{ settingsGstin || '—' }}</strong>
+    </div>
+    <div class="summary-item wide">
+      <span class="label">Shop address</span>
+      <strong>{{ settingsAddress || '—' }}</strong>
+    </div>
+    <div class="summary-item wide">
+      <span class="label">Tax pricing mode</span>
+      <strong>{{ taxExclusive ? 'Tax-exclusive (GST added on top)' : 'Tax-inclusive (default)' }}</strong>
+    </div>
+  </div>
 </section>

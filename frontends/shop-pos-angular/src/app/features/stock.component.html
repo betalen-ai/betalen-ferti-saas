@@ -1,13 +1,27 @@
 <header class="page-heading">
-  <div>
+  <div class="heading-copy">
     <span class="eyebrow">INVENTORY</span>
     <h1>Stock</h1>
     <p>Receive stock, adjust for damage or loss, and review the stock movement ledger.</p>
   </div>
+  <button
+    *ngIf="!showForm"
+    type="button"
+    class="btn btn-primary primary-action add-btn"
+    (click)="openStockForm()">
+    <i class="bi bi-plus-lg"></i> Record Stock
+  </button>
 </header>
 
-<section class="panel form-panel">
-  <div class="panel-title"><h2>Record stock movement</h2></div>
+<!-- Record Stock Screen -->
+<section class="panel form-panel" *ngIf="showForm">
+  <div class="panel-title">
+    <h2>Record stock movement</h2>
+    <button type="button" class="btn secondary-action" (click)="closeForm()">
+      <i class="bi bi-arrow-left"></i> Back
+    </button>
+  </div>
+
   <div class="form-grid three">
     <label>Movement
       <select class="form-select" [(ngModel)]="stockMode">
@@ -53,48 +67,130 @@
       <input class="form-control" [(ngModel)]="stockReason" placeholder="Required: damaged, lost, counted stock...">
     </label>
   </div>
+
   <p class="error" *ngIf="feedback">{{ feedback }}</p>
-  <button type="button" class="btn btn-primary primary-action" (click)="recordStock()">
-    {{ stockMode === 'in' ? 'Receive stock' : 'Save adjustment' }}
-  </button>
+
+  <div class="button-row">
+    <button type="button" class="btn btn-primary primary-action" (click)="recordStock()">
+      {{ stockMode === 'in' ? 'Receive stock' : 'Save adjustment' }}
+    </button>
+    <button type="button" class="btn secondary-action" (click)="closeForm()">Cancel</button>
+  </div>
 </section>
 
-<section class="panel table-panel">
-  <div class="panel-title"><h2>Stock by product and pack</h2></div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Product</th><th>Pack</th><th>Pack quantity</th><th>Base-unit stock</th><th>Low-stock level</th></tr></thead>
-      <tbody>
-        <ng-container *ngFor="let product of productService.products(); trackBy: trackById">
-          <tr *ngFor="let pack of product.packs ?? []; trackBy: trackById">
-            <td>{{ product.name }}</td>
-            <td>{{ packLabel(pack) }}</td>
-            <td>{{ productService.stockInPacks(product, pack) | number:'1.0-2' }}</td>
-            <td>{{ (product.stockBase?.[pack.id] ?? 0) | number:'1.0-2' }} {{ baseUnitOf(product) }}</td>
-            <td>{{ product.low_stock_level }} {{ baseUnitOf(product) }}</td>
+<!-- Grids (displayed first) -->
+<ng-container *ngIf="!showForm">
+  <section class="panel table-panel">
+    <div class="panel-title"><h2>Stock by product and pack</h2></div>
+
+    <!-- Desktop Table -->
+    <div class="table-wrap desktop-only">
+      <table>
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Pack</th>
+            <th>Pack quantity</th>
+            <th>Base-unit stock</th>
+            <th>Low-stock level</th>
           </tr>
-        </ng-container>
-      </tbody>
-    </table>
-  </div>
-</section>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let product of productService.products(); trackBy: trackById">
+            <tr *ngFor="let pack of product.packs ?? []; trackBy: trackById">
+              <td><b>{{ product.name }}</b></td>
+              <td>{{ packLabel(pack) }}</td>
+              <td>{{ productService.stockInPacks(product, pack) | number:'1.0-2' }}</td>
+              <td>{{ (product.stockBase?.[pack.id] ?? 0) | number:'1.0-2' }} {{ baseUnitOf(product) }}</td>
+              <td>{{ product.low_stock_level }} {{ baseUnitOf(product) }}</td>
+            </tr>
+          </ng-container>
+        </tbody>
+      </table>
+    </div>
 
-<section class="panel table-panel">
-  <div class="panel-title"><h2>Stock ledger</h2></div>
-  <div class="table-wrap" *ngIf="stockService.stockLedger().length; else noLedger">
-    <table>
-      <thead><tr><th>Date</th><th>Product</th><th>Movement</th><th>Quantity</th><th>Balance</th><th>Batch / reason</th></tr></thead>
-      <tbody>
-        <tr *ngFor="let entry of stockService.stockLedger(); trackBy: trackById">
-          <td>{{ entry.date | date:'dd MMM yyyy' }}</td>
-          <td>{{ entry.productName }}</td>
-          <td>{{ entry.type }}</td>
-          <td>{{ entry.quantityBase | number:'1.0-2' }}</td>
-          <td>{{ entry.balanceBase | number:'1.0-2' }}</td>
-          <td>{{ entry.batchNo || entry.reason }}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-  <ng-template #noLedger><p class="empty">No stock movements recorded yet.</p></ng-template>
-</section>
+    <!-- Mobile Cards -->
+    <div class="mobile-cards mobile-only">
+      <ng-container *ngFor="let product of productService.products(); trackBy: trackById">
+        <article class="stock-card" *ngFor="let pack of product.packs ?? []; trackBy: trackById">
+          <div class="card-head">
+            <b>{{ product.name }}</b>
+            <span class="pack-badge">{{ packLabel(pack) }}</span>
+          </div>
+          <div class="card-row">
+            <span>Pack quantity</span>
+            <strong>{{ productService.stockInPacks(product, pack) | number:'1.0-2' }}</strong>
+          </div>
+          <div class="card-row">
+            <span>Base-unit stock</span>
+            <strong>{{ (product.stockBase?.[pack.id] ?? 0) | number:'1.0-2' }} {{ baseUnitOf(product) }}</strong>
+          </div>
+          <div class="card-row">
+            <span>Low-stock level</span>
+            <strong>{{ product.low_stock_level }} {{ baseUnitOf(product) }}</strong>
+          </div>
+        </article>
+      </ng-container>
+    </div>
+  </section>
+
+  <section class="panel table-panel">
+    <div class="panel-title"><h2>Stock ledger</h2></div>
+
+    <ng-container *ngIf="stockService.stockLedger().length; else noLedger">
+      <!-- Desktop Table -->
+      <div class="table-wrap desktop-only">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Product</th>
+              <th>Movement</th>
+              <th>Quantity</th>
+              <th>Balance</th>
+              <th>Batch / reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let entry of stockService.stockLedger(); trackBy: trackById">
+              <td>{{ entry.date | date:'dd MMM yyyy' }}</td>
+              <td><b>{{ entry.productName }}</b></td>
+              <td>{{ entry.type }}</td>
+              <td>{{ entry.quantityBase | number:'1.0-2' }}</td>
+              <td>{{ entry.balanceBase | number:'1.0-2' }}</td>
+              <td>{{ entry.batchNo || entry.reason || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile Cards -->
+      <div class="mobile-cards mobile-only">
+        <article class="stock-card" *ngFor="let entry of stockService.stockLedger(); trackBy: trackById">
+          <div class="card-head">
+            <b>{{ entry.productName }}</b>
+            <span class="pack-badge">{{ entry.type }}</span>
+          </div>
+          <div class="card-row">
+            <span>Date</span>
+            <strong>{{ entry.date | date:'dd MMM yyyy' }}</strong>
+          </div>
+          <div class="card-row">
+            <span>Quantity</span>
+            <strong>{{ entry.quantityBase | number:'1.0-2' }}</strong>
+          </div>
+          <div class="card-row">
+            <span>Balance</span>
+            <strong>{{ entry.balanceBase | number:'1.0-2' }}</strong>
+          </div>
+          <div class="card-row">
+            <span>Batch / reason</span>
+            <strong>{{ entry.batchNo || entry.reason || '—' }}</strong>
+          </div>
+        </article>
+      </div>
+    </ng-container>
+
+    <ng-template #noLedger><p class="empty">No stock movements recorded yet.</p></ng-template>
+  </section>
+</ng-container>

@@ -30,6 +30,8 @@ export class ProductsPageComponent {
   readonly categoryService = inject(CategoryService);
   private readonly notice = inject(NoticeService);
 
+  activeView: 'grid' | 'product' | 'categories' = 'grid';
+
   productName = '';
   editingProductId = '';
   productBrand = '';
@@ -75,6 +77,23 @@ export class ProductsPageComponent {
   packLabel(pack: Pack): string { return `${pack.size} ${pack.size_unit}`; }
   packSummary(product: Product): string { return (product.packs ?? []).map(p => this.packLabel(p)).join(', '); }
 
+  openAddProduct(): void {
+    this.resetProductForm();
+    this.activeView = 'product';
+  }
+
+  openCategories(): void {
+    this.feedback = '';
+    this.activeView = 'categories';
+  }
+
+  closeForm(): void {
+    this.resetProductForm();
+    this.resetCategoryForm();
+    this.feedback = '';
+    this.activeView = 'grid';
+  }
+
   syncProductType(): void {
     const category = this.categoryService.categories().find(c => c.id === this.productCategory);
     if (category) this.productType = (category.product_type as ProductType) || 'Solid';
@@ -107,11 +126,12 @@ export class ProductsPageComponent {
       };
       if (this.editingProductId) {
         await this.productService.updateProduct(this.editingProductId, input, packInputs);
+        this.notice.show('Product updated.');
       } else {
         await this.productService.addProduct(input, packInputs);
+        this.notice.show('Product saved with its pack sizes.');
       }
-      this.resetProductForm();
-      this.notice.show('Product saved with its pack sizes.');
+      this.closeForm();
     } catch (error) {
       this.feedback = error instanceof Error ? error.message : 'Could not save product.';
     }
@@ -138,7 +158,8 @@ export class ProductsPageComponent {
           looseAllowed: p.allow_loose_sale,
         }))
       : [this.newPack()];
-    document.querySelector('.form-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    this.feedback = '';
+    this.activeView = 'product';
   }
 
   resetProductForm(): void {
