@@ -24,6 +24,7 @@ export class KhataPageComponent {
   private readonly notice = inject(NoticeService);
   private readonly route = inject(ActivatedRoute);
 
+  showForm = false;
   paymentFarmerId = this.route.snapshot.queryParamMap.get('farmer') ?? '';
   paymentAmount = 0;
   khataPaymentMode = 'Cash';
@@ -47,6 +48,27 @@ export class KhataPageComponent {
     return !!this.paymentFarmerId && this.paymentAmount > 0;
   }
 
+  openPaymentForm(farmerId = ''): void {
+    this.resetPaymentForm();
+    if (farmerId) {
+      this.paymentFarmerId = farmerId;
+    }
+    this.showForm = true;
+  }
+
+  closeForm(): void {
+    this.resetPaymentForm();
+    this.showForm = false;
+  }
+
+  resetPaymentForm(): void {
+    this.paymentFarmerId = '';
+    this.paymentAmount = 0;
+    this.khataPaymentMode = 'Cash';
+    this.paymentNote = '';
+    this.feedback = '';
+  }
+
   payFullBalance(): void {
     const balance = this.selectedFarmerBalance();
     if (balance > 0) this.paymentAmount = balance;
@@ -59,16 +81,14 @@ export class KhataPageComponent {
         this.paymentFarmerId, this.paymentAmount, this.khataPaymentMode, this.paymentNote
       );
       this.notice.show('Payment received and allocated to oldest unpaid bills.');
-      this.paymentAmount = 0;
-      this.paymentNote = '';
+      this.closeForm();
     } catch (error) {
       this.feedback = error instanceof Error ? error.message : 'Could not receive payment.';
     }
   }
 
   selectPaymentFarmer(id: string): void {
-    this.paymentFarmerId = id;
-    document.querySelector('.form-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    this.openPaymentForm(id);
   }
 
   filteredLedger(): KhataEntry[] {

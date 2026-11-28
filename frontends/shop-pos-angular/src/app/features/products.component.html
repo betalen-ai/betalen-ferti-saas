@@ -4,10 +4,25 @@
     <h1>Products</h1>
     <p>Products can have several pack sizes with separate prices and stock.</p>
   </div>
+  <div class="header-actions" *ngIf="activeView === 'grid'">
+    <button type="button" class="btn secondary-action" (click)="openCategories()">
+      Categories
+    </button>
+    <button type="button" class="btn btn-primary primary-action add-btn" (click)="openAddProduct()">
+      <i class="bi bi-plus-lg"></i> Add Product
+    </button>
+  </div>
 </header>
 
-<section class="panel form-panel">
-  <div class="panel-title"><h2>{{ editingProductId ? 'Edit product and packs' : 'Add product and packs' }}</h2></div>
+<!-- Add / Edit Product Screen -->
+<section class="panel form-panel" *ngIf="activeView === 'product'">
+  <div class="panel-title">
+    <h2>{{ editingProductId ? 'Edit product and packs' : 'Add product and packs' }}</h2>
+    <button type="button" class="btn secondary-action" (click)="closeForm()">
+      <i class="bi bi-arrow-left"></i> Back
+    </button>
+  </div>
+
   <div class="form-grid three">
     <label>Product name<input class="form-control" [(ngModel)]="productName" placeholder="e.g. DAP"></label>
     <label>Brand
@@ -53,13 +68,21 @@
   <button type="button" class="btn secondary-action add-pack" (click)="addDraftPack()"><i class="bi bi-plus-lg"></i> Add another pack</button>
   <p class="error" *ngIf="feedback">{{ feedback }}</p>
   <div class="button-row">
-    <button type="button" class="btn btn-primary primary-action" (click)="saveProduct()">{{ editingProductId ? 'Save product changes' : 'Save product' }}</button>
-    <button *ngIf="editingProductId" type="button" class="btn secondary-action" (click)="resetProductForm()">Cancel edit</button>
+    <button type="button" class="btn btn-primary primary-action" (click)="saveProduct()">
+      {{ editingProductId ? 'Save product changes' : 'Save product' }}
+    </button>
+    <button type="button" class="btn secondary-action" (click)="closeForm()">Cancel</button>
   </div>
 </section>
 
-<section class="panel form-panel category-panel">
-  <div class="panel-title"><h2>Categories</h2></div>
+<!-- Categories Screen -->
+<section class="panel form-panel category-panel" *ngIf="activeView === 'categories'">
+  <div class="panel-title">
+    <h2>Categories</h2>
+    <button type="button" class="btn secondary-action" (click)="closeForm()">
+      <i class="bi bi-arrow-left"></i> Back to products
+    </button>
+  </div>
   <div class="category-form">
     <label>Category name<input class="form-control" [(ngModel)]="categoryName"></label>
     <label>Type
@@ -69,10 +92,13 @@
     </label>
     <label>Default GST %<input class="form-control" type="number" min="0" [(ngModel)]="categoryGst"></label>
     <div class="category-buttons">
-      <button type="button" class="btn secondary-action" (click)="saveCategory()">{{ editingCategoryId ? 'Save category' : 'Add category' }}</button>
+      <button type="button" class="btn btn-primary primary-action" (click)="saveCategory()">
+        {{ editingCategoryId ? 'Save category' : 'Add category' }}
+      </button>
       <button *ngIf="editingCategoryId" type="button" class="btn secondary-action" (click)="resetCategoryForm()">Cancel edit</button>
     </div>
   </div>
+  <p class="error" *ngIf="feedback">{{ feedback }}</p>
   <div class="category-list">
     <div class="category-row" *ngFor="let category of categoryService.categories(); trackBy: trackById">
       <span>{{ category.name }} · {{ category.product_type }} · {{ category.active ? 'Active' : 'Inactive' }}</span>
@@ -82,7 +108,8 @@
   </div>
 </section>
 
-<section class="panel table-panel">
+<!-- Product Catalog Grid (displayed first) -->
+<section class="panel table-panel" *ngIf="activeView === 'grid'">
   <div class="panel-title">
     <h2>Product catalog</h2>
     <div class="filters">
@@ -103,6 +130,9 @@
       <label class="filter-check"><input type="checkbox" [(ngModel)]="lowStockOnly"> Low stock only</label>
     </div>
   </div>
+
+  <p class="error" *ngIf="feedback">{{ feedback }}</p>
+
   <div class="table-wrap" *ngIf="filteredProducts().length; else noProducts">
     <table>
       <thead><tr><th>Product</th><th>Brand / Category</th><th>Packs</th><th>Stock</th><th>Cash price</th><th>Status</th><th>Action</th></tr></thead>

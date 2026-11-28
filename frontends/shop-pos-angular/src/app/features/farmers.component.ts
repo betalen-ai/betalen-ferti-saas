@@ -23,6 +23,7 @@ export class FarmersPageComponent {
   private readonly seasonService = inject(SeasonService);
   private readonly notice = inject(NoticeService);
 
+  showForm = false;
   farmerName = '';
   farmerMobile = '';
   farmerVillage = '';
@@ -49,6 +50,28 @@ export class FarmersPageComponent {
     return !!this.farmerName.trim() && this.validMobile && !this.duplicateMobile;
   }
 
+  openAddForm(): void {
+    this.resetFarmerForm();
+    this.showForm = true;
+  }
+
+  closeForm(): void {
+    this.resetFarmerForm();
+    this.showForm = false;
+  }
+
+  resetFarmerForm(): void {
+    this.farmerName = '';
+    this.farmerMobile = '';
+    this.farmerVillage = '';
+    this.farmerAddress = '';
+    this.farmerLand = null;
+    this.farmerCreditLimit = null;
+    this.farmerOpening = 0;
+    this.farmerNotes = '';
+    this.feedback = '';
+  }
+
   async saveFarmer(): Promise<void> {
     this.feedback = '';
     try {
@@ -63,14 +86,7 @@ export class FarmersPageComponent {
         opening_balance: this.farmerOpening,
         active: true,
       });
-      this.farmerName = '';
-      this.farmerMobile = '';
-      this.farmerVillage = '';
-      this.farmerAddress = '';
-      this.farmerLand = null;
-      this.farmerCreditLimit = null;
-      this.farmerOpening = 0;
-      this.farmerNotes = '';
+      this.closeForm();
       this.notice.show('Farmer added.');
     } catch (error) {
       this.feedback = error instanceof Error ? error.message : 'Could not add farmer.';

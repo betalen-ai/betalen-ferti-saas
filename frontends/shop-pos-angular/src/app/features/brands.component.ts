@@ -18,15 +18,17 @@ export class BrandsPageComponent implements OnInit {
   private readonly productService = inject(ProductService);
   private readonly notice = inject(NoticeService);
 
+  showForm = false;
   brandName = '';
   brandManufacturer = '';
   brandNotes = '';
   editingBrandId = '';
   feedback = '';
-  
+
   ngOnInit(): void {
     this.brandService.refreshBrands();
   }
+
   get duplicateBrandName(): boolean {
     const name = this.brandName.trim().toLowerCase();
     if (!name) return false;
@@ -43,23 +45,9 @@ export class BrandsPageComponent implements OnInit {
     return this.productService.products().filter(p => p.brand_id === brandId).length;
   }
 
-  async saveBrand(): Promise<void> {
-    this.feedback = '';
-    try {
-      if (!this.brandName.trim()) {
-        this.feedback = 'Enter a brand name.';
-        return;
-      }
-      if (this.editingBrandId) {
-        await this.brandService.updateBrand(this.editingBrandId, this.brandName, this.brandManufacturer, this.brandNotes);
-      } else {
-        await this.brandService.addBrand(this.brandName, this.brandManufacturer, this.brandNotes);
-      }
-      this.resetBrandForm();
-      this.notice.show('Brand saved.');
-    } catch (error) {
-      this.feedback = error instanceof Error ? error.message : 'Could not save brand.';
-    }
+  openAddForm(): void {
+    this.resetBrandForm();
+    this.showForm = true;
   }
 
   editBrand(id: string): void {
@@ -69,6 +57,42 @@ export class BrandsPageComponent implements OnInit {
     this.brandName = brand.name;
     this.brandManufacturer = brand.manufacturer;
     this.brandNotes = brand.notes;
+    this.feedback = '';
+    this.showForm = true;
+  }
+
+  closeForm(): void {
+    this.resetBrandForm();
+    this.showForm = false;
+  }
+
+  async saveBrand(): Promise<void> {
+    this.feedback = '';
+    try {
+      if (!this.brandName.trim()) {
+        this.feedback = 'Enter a brand name.';
+        return;
+      }
+      if (this.editingBrandId) {
+        await this.brandService.updateBrand(
+          this.editingBrandId,
+          this.brandName,
+          this.brandManufacturer,
+          this.brandNotes
+        );
+        this.notice.show('Brand updated.');
+      } else {
+        await this.brandService.addBrand(
+          this.brandName,
+          this.brandManufacturer,
+          this.brandNotes
+        );
+        this.notice.show('Brand saved.');
+      }
+      this.closeForm();
+    } catch (error) {
+      this.feedback = error instanceof Error ? error.message : 'Could not save brand.';
+    }
   }
 
   resetBrandForm(): void {

@@ -17,6 +17,7 @@ export class SettingsPageComponent {
   private readonly tenant = inject(TenantService);
   private readonly notice = inject(NoticeService);
 
+  showForm = false;
   settingsShopName = this.tenant.name();
   settingsGstin = this.tenant.tenant()?.gstin ?? '';
   settingsAddress = String(this.settingsService.settings()?.values?.['address'] ?? '');
@@ -25,17 +26,36 @@ export class SettingsPageComponent {
 
   constructor() {
     effect(() => {
-      const t = this.tenant.tenant();
-      if (t) {
-        if (!this.settingsShopName) this.settingsShopName = t.name;
-        if (!this.settingsGstin) this.settingsGstin = t.gstin;
-      }
-      const s = this.settingsService.settings()?.values;
-      if (s) {
-        if (!this.settingsAddress && s['address']) this.settingsAddress = String(s['address']);
-        if (typeof s['tax_exclusive'] === 'boolean') this.taxExclusive = s['tax_exclusive'];
-      }
+      if (this.showForm) return;
+      this.syncFromStore();
     });
+  }
+
+  private syncFromStore(): void {
+    const t = this.tenant.tenant();
+    if (t) {
+      this.settingsShopName = t.name;
+      this.settingsGstin = t.gstin ?? '';
+    }
+    const s = this.settingsService.settings()?.values;
+    if (s) {
+      this.settingsAddress = s['address'] ? String(s['address']) : '';
+      if (typeof s['tax_exclusive'] === 'boolean') {
+        this.taxExclusive = s['tax_exclusive'];
+      }
+    }
+  }
+
+  openEditForm(): void {
+    this.syncFromStore();
+    this.feedback = '';
+    this.showForm = true;
+  }
+
+  closeForm(): void {
+    this.syncFromStore();
+    this.feedback = '';
+    this.showForm = false;
   }
 
   async saveSettings(): Promise<void> {
@@ -54,6 +74,7 @@ export class SettingsPageComponent {
         tax_exclusive: this.taxExclusive,
       });
       this.notice.show('Shop profile saved.');
+      this.showForm = false;
     } catch (error) {
       this.feedback = error instanceof Error ? error.message : 'Could not save settings.';
     }

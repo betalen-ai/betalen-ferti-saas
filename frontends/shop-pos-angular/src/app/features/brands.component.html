@@ -4,11 +4,22 @@
     <h1>Brands</h1>
     <p>Manage the manufacturers and brands carried by your shop.</p>
   </div>
+  <button
+    *ngIf="!showForm"
+    type="button"
+    class="btn btn-primary primary-action add-btn"
+    (click)="openAddForm()">
+    <i class="bi bi-plus-lg"></i> Add Brand
+  </button>
 </header>
 
-<section class="panel form-panel">
+<!-- Add / Edit Screen -->
+<section class="panel form-panel" *ngIf="showForm">
   <div class="panel-title">
     <h2>{{ editingBrandId ? 'Edit brand' : 'Add a brand' }}</h2>
+    <button type="button" class="btn secondary-action" (click)="closeForm()">
+      <i class="bi bi-arrow-left"></i> Back
+    </button>
   </div>
 
   <div class="form-grid">
@@ -27,20 +38,27 @@
   <p class="error" *ngIf="feedback">{{ feedback }}</p>
 
   <div class="button-row">
-    <button type="button" class="btn btn-primary primary-action" [disabled]="!canSaveBrand" (click)="saveBrand()">
+    <button
+      type="button"
+      class="btn btn-primary primary-action"
+      [disabled]="!canSaveBrand"
+      (click)="saveBrand()">
       {{ editingBrandId ? 'Save changes' : 'Add brand' }}
     </button>
-    <button *ngIf="editingBrandId" type="button" class="btn secondary-action" (click)="resetBrandForm()">
-      Cancel edit
+    <button type="button" class="btn secondary-action" (click)="closeForm()">
+      Cancel
     </button>
   </div>
 </section>
 
-<section class="panel table-panel">
+<!-- Grid Screen (displayed first) -->
+<section class="panel table-panel" *ngIf="!showForm">
   <div class="panel-title">
     <h2>Brand list</h2>
     <span>{{ brandService.brands().length }} brands</span>
   </div>
+
+  <p class="error" *ngIf="feedback">{{ feedback }}</p>
 
   <div class="table-wrap" *ngIf="brandService.brands().length; else noBrands">
     <table>
@@ -71,5 +89,7 @@
       </tbody>
     </table>
   </div>
-  <ng-template #noBrands><p class="empty">No brands yet. Add your first brand above.</p></ng-template>
+  <ng-template #noBrands>
+    <p class="empty">No brands yet. Tap "Add Brand" to create your first brand.</p>
+  </ng-template>
 </section>

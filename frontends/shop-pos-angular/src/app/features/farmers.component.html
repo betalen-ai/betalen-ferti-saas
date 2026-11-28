@@ -4,10 +4,23 @@
     <h1>Farmers</h1>
     <p>Keep customer contacts, opening balances and credit limits together.</p>
   </div>
+  <button
+    *ngIf="!showForm"
+    type="button"
+    class="btn btn-primary primary-action add-btn"
+    (click)="openAddForm()">
+    <i class="bi bi-person-plus"></i> Add Farmer
+  </button>
 </header>
 
-<section class="panel form-panel">
-  <div class="panel-title"><h2>Add farmer</h2></div>
+<!-- Add Screen -->
+<section class="panel form-panel" *ngIf="showForm">
+  <div class="panel-title">
+    <h2>Add farmer</h2>
+    <button type="button" class="btn secondary-action" (click)="closeForm()">
+      <i class="bi bi-arrow-left"></i> Back
+    </button>
+  </div>
 
   <div class="form-grid three">
     <label>Name<input class="form-control" [(ngModel)]="farmerName" placeholder="Full name"></label>
@@ -23,12 +36,18 @@
   <p class="warn" *ngIf="duplicateMobile">A farmer with this mobile number already exists.</p>
   <p class="error" *ngIf="feedback">{{ feedback }}</p>
 
-  <button type="button" class="btn btn-primary primary-action" [disabled]="!canSaveFarmer" (click)="saveFarmer()">
-    <i class="bi bi-person-plus"></i> Add farmer
-  </button>
+  <div class="button-row">
+    <button type="button" class="btn btn-primary primary-action" [disabled]="!canSaveFarmer" (click)="saveFarmer()">
+      <i class="bi bi-person-plus"></i> Add farmer
+    </button>
+    <button type="button" class="btn secondary-action" (click)="closeForm()">
+      Cancel
+    </button>
+  </div>
 </section>
 
-<section class="panel table-panel">
+<!-- Grid Screen (displayed first) -->
+<section class="panel table-panel" *ngIf="!showForm">
   <div class="panel-title">
     <h2>Farmer directory</h2>
     <div class="filters">

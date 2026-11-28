@@ -16,6 +16,7 @@ export class SeasonsPageComponent {
   readonly seasonService = inject(SeasonService);
   private readonly notice = inject(NoticeService);
 
+  showForm = false;
   seasonName = '';
   seasonStart = '';
   seasonEnd = '';
@@ -26,6 +27,29 @@ export class SeasonsPageComponent {
   seasonGrace = 0;
   seasonLateInterest = 1;
   feedback = '';
+
+  openAddForm(): void {
+    this.resetSeasonForm();
+    this.showForm = true;
+  }
+
+  closeForm(): void {
+    this.resetSeasonForm();
+    this.showForm = false;
+  }
+
+  resetSeasonForm(): void {
+    this.seasonName = '';
+    this.seasonStart = '';
+    this.seasonEnd = '';
+    this.seasonDiscount = 0;
+    this.seasonDiscountType = 'amount';
+    this.seasonInterest = 1;
+    this.seasonDue = '';
+    this.seasonGrace = 0;
+    this.seasonLateInterest = 1;
+    this.feedback = '';
+  }
 
   async saveSeason(): Promise<void> {
     this.feedback = '';
@@ -44,7 +68,7 @@ export class SeasonsPageComponent {
         grace_days: this.seasonGrace,
         late_interest_per_day: this.seasonLateInterest,
       });
-      this.seasonName = '';
+      this.closeForm();
       this.notice.show('Season saved.');
     } catch (error) {
       this.feedback = error instanceof Error ? error.message : 'Could not save season.';

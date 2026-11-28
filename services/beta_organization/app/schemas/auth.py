@@ -1,16 +1,28 @@
 ﻿import uuid
 from pydantic import BaseModel, EmailStr, Field
 
+
 class LoginRequest(BaseModel):
     tenant_id: str | None = None
     subdomain: str | None = None
     email: EmailStr
     password: str
 
+
 class TokenResponse(BaseModel):
     access_token: str
+    refresh_token: str | None = None
     token_type: str = "bearer"
     expires_in: int
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str | None = None  # optional: falls back to httpOnly cookie
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: str | None = None
+
 
 class SignupRequest(BaseModel):
     owner_name: str = Field(min_length=2, max_length=120)
@@ -19,7 +31,9 @@ class SignupRequest(BaseModel):
     mobile: str = Field(description="10-digit number, without +91")
     password: str = Field(min_length=8, max_length=128)
 
+
 class SignupResponse(BaseModel):
     access_token: str
+    refresh_token: str | None = None
     token_type: str = "bearer"
     expires_in: int
