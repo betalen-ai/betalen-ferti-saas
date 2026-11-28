@@ -1,0 +1,100 @@
+<header class="page-heading">
+  <div>
+    <span class="eyebrow">INVENTORY</span>
+    <h1>Stock</h1>
+    <p>Receive stock, adjust for damage or loss, and review the stock movement ledger.</p>
+  </div>
+</header>
+
+<section class="panel form-panel">
+  <div class="panel-title"><h2>Record stock movement</h2></div>
+  <div class="form-grid three">
+    <label>Movement
+      <select class="form-select" [(ngModel)]="stockMode">
+        <option value="in">Stock in (purchase)</option>
+        <option value="adjustment">Adjustment (loss / damage)</option>
+      </select>
+    </label>
+    <label>Product
+      <select class="form-select" [(ngModel)]="stockProductId" (ngModelChange)="syncStockPack()">
+        <option value="">Choose product</option>
+        <option *ngFor="let product of activeProducts(); trackBy: trackById" [value]="product.id">{{ product.name }}</option>
+      </select>
+    </label>
+    <label>Pack
+      <select class="form-select" [(ngModel)]="stockPackId" (ngModelChange)="syncStockLot()">
+        <option *ngFor="let pack of selectedStockProduct()?.packs ?? []; trackBy: trackById" [value]="pack.id">{{ packLabel(pack) }}</option>
+      </select>
+    </label>
+    <label *ngIf="stockMode === 'adjustment'">Stock lot
+      <select class="form-select" [(ngModel)]="stockLotId">
+        <option value="">Choose lot</option>
+        <option *ngFor="let lot of lotsForSelectedPack(); trackBy: trackById" [value]="lot.id">
+          {{ lot.batch_number || lot.received_date }} · Avail {{ lot.available_base }}
+        </option>
+      </select>
+    </label>
+    <label>Quantity (packs for stock in; signed for adjustment)
+      <input class="form-control" type="number" step="0.1" [(ngModel)]="stockQuantity">
+    </label>
+    <label *ngIf="stockMode === 'in'">Cost price per pack (₹)
+      <input class="form-control" type="number" min="0" [(ngModel)]="stockCost">
+    </label>
+    <label *ngIf="stockMode === 'in'">Supplier
+      <input class="form-control" [(ngModel)]="stockSupplier">
+    </label>
+    <label *ngIf="stockMode === 'in'">Batch number
+      <input class="form-control" [(ngModel)]="stockBatch">
+    </label>
+    <label *ngIf="stockMode === 'in'">Expiry date
+      <input class="form-control" type="date" [(ngModel)]="stockExpiry">
+    </label>
+    <label class="wide" *ngIf="stockMode === 'adjustment'">Reason
+      <input class="form-control" [(ngModel)]="stockReason" placeholder="Required: damaged, lost, counted stock...">
+    </label>
+  </div>
+  <p class="error" *ngIf="feedback">{{ feedback }}</p>
+  <button type="button" class="btn btn-primary primary-action" (click)="recordStock()">
+    {{ stockMode === 'in' ? 'Receive stock' : 'Save adjustment' }}
+  </button>
+</section>
+
+<section class="panel table-panel">
+  <div class="panel-title"><h2>Stock by product and pack</h2></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Product</th><th>Pack</th><th>Pack quantity</th><th>Base-unit stock</th><th>Low-stock level</th></tr></thead>
+      <tbody>
+        <ng-container *ngFor="let product of productService.products(); trackBy: trackById">
+          <tr *ngFor="let pack of product.packs ?? []; trackBy: trackById">
+            <td>{{ product.name }}</td>
+            <td>{{ packLabel(pack) }}</td>
+            <td>{{ productService.stockInPacks(product, pack) | number:'1.0-2' }}</td>
+            <td>{{ (product.stockBase?.[pack.id] ?? 0) | number:'1.0-2' }} {{ baseUnitOf(product) }}</td>
+            <td>{{ product.low_stock_level }} {{ baseUnitOf(product) }}</td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel table-panel">
+  <div class="panel-title"><h2>Stock ledger</h2></div>
+  <div class="table-wrap" *ngIf="stockService.stockLedger().length; else noLedger">
+    <table>
+      <thead><tr><th>Date</th><th>Product</th><th>Movement</th><th>Quantity</th><th>Balance</th><th>Batch / reason</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let entry of stockService.stockLedger(); trackBy: trackById">
+          <td>{{ entry.date | date:'dd MMM yyyy' }}</td>
+          <td>{{ entry.productName }}</td>
+          <td>{{ entry.type }}</td>
+          <td>{{ entry.quantityBase | number:'1.0-2' }}</td>
+          <td>{{ entry.balanceBase | number:'1.0-2' }}</td>
+          <td>{{ entry.batchNo || entry.reason }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <ng-template #noLedger><p class="empty">No stock movements recorded yet.</p></ng-template>
+</section>

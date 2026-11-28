@@ -1,0 +1,13 @@
+.toast-message {
+  position: fixed;
+  right: 24px;
+  bottom: 55px;
+  z-index: 20;
+  padding: 14px 18px;
+  border: 1.5px solid #0b6b3a;
+  border-radius: 10px;
+  background: #edf7ec;
+  color: #0b6b3a;
+  font-weight: 700;
+  box-shadow: 0 8px 20px #14211a22;
+}

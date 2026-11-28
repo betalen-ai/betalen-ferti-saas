@@ -1,0 +1,39 @@
+
+:root {
+  --primary: #0b6b3a;
+  --primary-dark: #084d2a;
+  --accent: #7bc043;
+  --soil: #7a4e2d;
+  --gold: #f2b632;
+  --sky: #e8f1fb;
+  --cream: #f7f7f2;
+  --surface: #ffffff;
+  --text: #14211a;
+  --muted: #5c6b62;
+  --heading-font: 'Space Grotesk', sans-serif;
+  --body-font: 'Inter', sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+html, body { min-width: 320px; }
+body { margin: 0; background: var(--cream); color: var(--text); font-family: var(--body-font); line-height: 1.65; }
+img, svg, video, canvas { max-width: 100%; }
+h1, h2, h3, h4 { font-family: var(--heading-font); color: var(--text); }
+h1 { font-size: clamp(2.25rem, 5vw, 3.5rem); line-height: 1.12; }
+h2 { font-size: clamp(1.9rem, 4vw, 2.75rem); line-height: 1.18; }
+a { color: var(--primary); }
+.btn { min-height: 48px; border-radius: 10px; padding: 12px 20px; font-weight: 700; }
+.btn-primary { background: var(--primary); border-color: var(--primary); color: white; }
+.btn-primary:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
+.btn-outline-primary { color: var(--primary); border-color: var(--primary); }
+.container { max-width: 1200px; }
+.eyebrow { color: var(--primary); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.section { padding: clamp(48px, 7vw, 88px) 0; }
+.section-head { max-width: 680px; margin: 0 auto 48px; text-align: center; }
+.card { border: 0; border-radius: 16px; box-shadow: 0 12px 40px rgba(20,33,26,.08); }
+.form-control, .form-select { min-height: 52px; border-radius: 10px; border-color: #d8dfda; }
+.form-control:focus, .form-select:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(123,192,67,.16); }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid rgba(123,192,67,.8); outline-offset: 2px; }
+.page-header { background: var(--primary-dark); color: white; padding: clamp(120px, 14vw, 145px) 0 clamp(48px, 7vw, 72px); }
+.page-header h1, .page-header p, .page-header .breadcrumb a, .page-header .breadcrumb-item.active { color: white; }
+.breadcrumb-item + .breadcrumb-item::before { color: rgba(255,255,255,.65); }

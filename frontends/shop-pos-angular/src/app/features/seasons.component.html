@@ -1,0 +1,50 @@
+<header class="page-heading">
+  <div>
+    <span class="eyebrow">PRICING RULES</span>
+    <h1>Seasons</h1>
+    <p>Set seasonal discounts, credit terms and due dates. Adjust them per bill when needed.</p>
+  </div>
+</header>
+
+<section class="panel form-panel">
+  <div class="panel-title"><h2>Create a season</h2></div>
+  <div class="form-grid three">
+    <label>Name<input class="form-control" [(ngModel)]="seasonName" placeholder="Kharif 2026"></label>
+    <label>Start date<input class="form-control" type="date" [(ngModel)]="seasonStart"></label>
+    <label>End date<input class="form-control" type="date" [(ngModel)]="seasonEnd"></label>
+    <label>Default cash discount<input class="form-control" type="number" min="0" [(ngModel)]="seasonDiscount"></label>
+    <label>Discount type
+      <select class="form-select" [(ngModel)]="seasonDiscountType">
+        <option value="amount">Fixed ₹</option>
+        <option value="percent">Percent %</option>
+      </select>
+    </label>
+    <label>Credit interest (% / month)<input class="form-control" type="number" min="0" step="0.1" [(ngModel)]="seasonInterest"></label>
+    <label>Credit due date<input class="form-control" type="date" [(ngModel)]="seasonDue"></label>
+    <label>Grace days<input class="form-control" type="number" min="0" [(ngModel)]="seasonGrace"></label>
+    <label>Late interest (% / day)<input class="form-control" type="number" min="0" step="0.1" [(ngModel)]="seasonLateInterest"></label>
+  </div>
+  <p class="error" *ngIf="feedback">{{ feedback }}</p>
+  <button type="button" class="btn btn-primary primary-action" (click)="saveSeason()">Save season</button>
+</section>
+
+<section class="panel table-panel">
+  <div class="panel-title"><h2>Season list</h2></div>
+  <div class="table-wrap" *ngIf="seasonService.seasons().length; else noSeasons">
+    <table>
+      <thead><tr><th>Name</th><th>Dates</th><th>Cash discount</th><th>Credit interest</th><th>Due date</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <tr *ngFor="let season of seasonService.seasons(); trackBy: trackById">
+          <td><b>{{ season.name }}</b></td>
+          <td>{{ season.start_date | date:'dd MMM yyyy' }} – {{ season.end_date | date:'dd MMM yyyy' }}</td>
+          <td>{{ season.discountType === 'amount' ? (season.default_cash_discount | currency:'INR':'symbol':'1.0-0':'en-IN') : season.default_cash_discount + '%' }}</td>
+          <td>{{ season.default_credit_interest_per_month }}% / month</td>
+          <td>{{ season.due_date ? (season.due_date | date:'dd MMM yyyy') : '—' }}</td>
+          <td><span class="status" [class.inactive]="season.active === false">{{ season.active === false ? 'Inactive' : 'Active' }}</span></td>
+          <td><button class="btn danger-button" *ngIf="season.active !== false" (click)="deactivateSeason(season.id)">Deactivate</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <ng-template #noSeasons><p class="empty">No seasons configured yet.</p></ng-template>
+</section>

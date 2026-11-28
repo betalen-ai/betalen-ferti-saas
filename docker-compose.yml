@@ -1,0 +1,131 @@
+networks:
+  betalen-net:
+    driver: bridge
+
+volumes:
+  pg_data: {}
+  redis_data: {}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: betalen-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-betalen}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-betalen_dev_pw}
+      POSTGRES_DB: ${POSTGRES_DB:-betalen_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U betalen -d betalen_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - betalen-net
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - betalen-net
+
+  api-gateway:
+    build: ./services/api-gateway
+    env_file: .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - betalen-net
+
+  beta_organization:
+    build: ./services/beta_organization
+    env_file: .env
+    ports:
+      - "8001:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - betalen-net
+
+  beta_billing:
+    build: ./services/beta_billing
+    env_file: .env
+    ports:
+      - "8002:8002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - betalen-net
+
+  beta_inventory:
+    build: ./services/beta_inventory
+    env_file: .env
+    ports:
+      - "8003:8003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - betalen-net
+
+  beta_reports:
+    build: ./services/beta_reports
+    env_file: .env
+    ports:
+      - "8004:8004"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - betalen-net
+
+  beta_email:
+    build: ./services/beta_email
+    env_file: .env
+    expose:
+      - "8005"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    networks:
+      - betalen-net
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    networks:
+      - betalen-net
+
+  shop-pos-angular:
+    build: ./frontends/shop-pos-angular
+    ports:
+      - "4200:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - betalen-net
+
+  backoffice-react:
+    build: ./frontends/backoffice-react
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - betalen-net

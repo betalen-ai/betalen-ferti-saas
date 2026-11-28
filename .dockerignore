@@ -1,0 +1,9 @@
+.git
+.github
+.copilot
+**/node_modules
+**/dist
+**/.angular
+**/__pycache__
+**/*.pyc
+**/.pytest_cache

@@ -1,0 +1,98 @@
+<header class="page-heading">
+  <div>
+    <span class="eyebrow">CUSTOMER LEDGER</span>
+    <h1>Khata</h1>
+    <p>Receive payments and review each farmer's running account balance.</p>
+  </div>
+</header>
+
+<section class="panel form-panel">
+  <div class="panel-title">
+    <h2>Receive payment</h2>
+    <button *ngIf="selectedFarmerBalance() > 0" type="button" class="btn secondary-action" (click)="payFullBalance()">
+      Fill full balance ({{ selectedFarmerBalance() | currency:'INR':'symbol':'1.0-0':'en-IN' }})
+    </button>
+  </div>
+
+  <div class="form-grid three">
+    <label>Farmer
+      <select class="form-select" [(ngModel)]="paymentFarmerId">
+        <option value="">Choose farmer</option>
+        <option *ngFor="let farmer of farmerService.farmers(); trackBy: trackById" [value]="farmer.id">
+          {{ farmer.name }} · {{ khataService.farmerBalance(farmer.id) | currency:'INR':'symbol':'1.0-0':'en-IN' }}
+        </option>
+      </select>
+    </label>
+    <label>Amount (₹)<input class="form-control" type="number" min="1" [(ngModel)]="paymentAmount"></label>
+    <label>Payment mode
+      <select class="form-select" [(ngModel)]="khataPaymentMode">
+        <option>Cash</option><option>UPI</option><option>Bank</option>
+      </select>
+    </label>
+    <label class="wide">Note<input class="form-control" [(ngModel)]="paymentNote" placeholder="Optional reference or receipt note"></label>
+  </div>
+
+  <p class="farmer-info" *ngIf="selectedFarmer() as farmer">
+    {{ farmer.name }} · Current outstanding {{ selectedFarmerBalance() | currency:'INR':'symbol':'1.0-0':'en-IN' }}
+  </p>
+  <p class="error" *ngIf="feedback">{{ feedback }}</p>
+
+  <button class="btn btn-primary primary-action" type="button" [disabled]="!canReceivePayment" (click)="receivePayment()">
+    <i class="bi bi-cash-coin"></i> Receive Payment
+  </button>
+</section>
+
+<section class="panel table-panel">
+  <div class="panel-title">
+    <h2>Balances due</h2>
+    <div class="button-row">
+      <button class="btn secondary-action" type="button" (click)="printLedger()">Export / print ledger</button>
+      <button class="btn secondary-action" type="button" (click)="sendReminder()">Send Reminder</button>
+    </div>
+  </div>
+
+  <div class="table-wrap" *ngIf="farmersWithDues().length; else noDues">
+    <table>
+      <thead><tr><th>Farmer</th><th>Mobile</th><th>Outstanding</th><th>Overdue</th><th>Last payment</th><th></th></tr></thead>
+      <tbody>
+        <tr *ngFor="let farmer of farmersWithDues(); trackBy: trackById">
+          <td><b>{{ farmer.name }}</b></td>
+          <td>{{ farmer.mobile }}</td>
+          <td>{{ khataService.farmerBalance(farmer.id) | currency:'INR':'symbol':'1.0-0':'en-IN' }}</td>
+          <td [class.danger]="farmerOverdue(farmer.id)">{{ farmerOverdue(farmer.id) ? 'Overdue' : '—' }}</td>
+          <td>{{ lastPayment(farmer.id) ? (lastPayment(farmer.id) | date:'dd MMM yyyy') : '—' }}</td>
+          <td><button type="button" class="btn secondary-action" (click)="selectPaymentFarmer(farmer.id)">Receive payment</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <ng-template #noDues><p class="empty">No outstanding customer balances.</p></ng-template>
+</section>
+
+<section class="panel table-panel">
+  <div class="panel-title">
+    <h2>Ledger entries</h2>
+    <select class="form-select farmer-filter" [(ngModel)]="ledgerFarmerId">
+      <option value="">All farmers</option>
+      <option *ngFor="let farmer of farmerService.farmers(); trackBy: trackById" [value]="farmer.id">{{ farmer.name }}</option>
+    </select>
+  </div>
+
+  <div class="table-wrap" *ngIf="filteredLedger().length; else noEntries">
+    <table>
+      <thead><tr><th>Date</th><th>Farmer</th><th>Description</th><th>Bill</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let entry of filteredLedger(); trackBy: trackByEntry">
+          <td>{{ (entry.date || entry.created_at) | date:'dd MMM yyyy' }}</td>
+          <td>{{ farmerDisplayName(entry.farmer_id) }}</td>
+          <td>{{ entry.description }}</td>
+          <td>{{ entry.billNumber || '—' }}</td>
+          <td>{{ entry.debit > 0 ? (entry.debit | currency:'INR':'symbol':'1.0-0':'en-IN') : '—' }}</td>
+          <td>{{ entry.credit > 0 ? (entry.credit | currency:'INR':'symbol':'1.0-0':'en-IN') : '—' }}</td>
+          <td>{{ entry.balanceAfter != null ? (entry.balanceAfter | currency:'INR':'symbol':'1.0-0':'en-IN') : '—' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <ng-template #noEntries><p class="empty">No ledger entries yet.</p></ng-template>
+</section>

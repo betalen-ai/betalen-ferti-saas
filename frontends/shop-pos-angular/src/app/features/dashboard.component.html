@@ -1,0 +1,85 @@
+<header class="page-heading">
+  <div>
+    <span class="eyebrow">SHOP OVERVIEW</span>
+    <h1>Good {{ dayPart }}, {{ ownerName }}</h1>
+    <p>Your shop at a glance for today.</p>
+  </div>
+  <a class="btn btn-primary primary-action" routerLink="/app/pos"><i class="bi bi-cart-plus"></i> New Sale</a>
+</header>
+
+<section class="kpi-grid">
+  <article class="panel kpi">
+    <span>Today's sales</span>
+    <strong>{{ billService.todaySales() | currency:'INR':'symbol':'1.0-0':'en-IN' }}</strong>
+    <small>Collected today</small>
+  </article>
+  <article class="panel kpi">
+    <span>Cash in hand</span>
+    <strong>{{ billService.cashInHand() | currency:'INR':'symbol':'1.0-0':'en-IN' }}</strong>
+    <small>Cash drawer total today</small>
+  </article>
+  <article class="panel kpi">
+    <span>Credit outstanding</span>
+    <strong>{{ totalCredit() | currency:'INR':'symbol':'1.0-0':'en-IN' }}</strong>
+    <small>{{ farmerService.farmers().length }} customers</small>
+  </article>
+  <article class="panel kpi warning">
+    <span>Low-stock items</span>
+    <strong>{{ productService.lowStockProducts().length }}</strong>
+    <small>Review stock and reorder</small>
+  </article>
+</section>
+
+<section class="quick-actions">
+  <a class="panel quick" routerLink="/app/pos"><i class="bi bi-cart-plus"></i><span>New Sale</span></a>
+  <a class="panel quick" routerLink="/app/products"><i class="bi bi-plus-square"></i><span>Add Product</span></a>
+  <a class="panel quick" routerLink="/app/farmers"><i class="bi bi-person-plus"></i><span>Add Farmer</span></a>
+  <a class="panel quick" routerLink="/app/khata"><i class="bi bi-cash-coin"></i><span>Receive Payment</span></a>
+</section>
+
+<section class="dashboard-panels">
+  <article class="panel">
+    <div class="panel-title">
+      <h2>Recent bills</h2>
+      <a routerLink="/app/bills">View all bills</a>
+    </div>
+    <ng-container *ngIf="recentBills().length; else noBills">
+      <div class="list-row" *ngFor="let bill of recentBills(); trackBy: trackById">
+        <b>{{ bill.bill_number }}</b>
+        <span>{{ bill.farmerName || farmerDisplayName(bill.farmer_id) }}</span>
+        <strong>{{ bill.total | currency:'INR':'symbol':'1.0-0':'en-IN' }}</strong>
+      </div>
+    </ng-container>
+    <ng-template #noBills><p class="empty">Bills you create will appear here.</p></ng-template>
+  </article>
+
+  <article class="panel">
+    <div class="panel-title">
+      <h2>Low stock alerts</h2>
+      <a routerLink="/app/stock">Manage stock</a>
+    </div>
+    <ng-container *ngIf="productService.lowStockProducts().length; else noLowStock">
+      <div class="list-row" *ngFor="let product of productService.lowStockProducts(); trackBy: trackByProduct">
+        <b>{{ product.name }}</b>
+        <span>{{ productService.totalStock(product) | number:'1.0-2' }} {{ baseUnitOf(product) }} left</span>
+        <strong class="danger">Low</strong>
+      </div>
+    </ng-container>
+    <ng-template #noLowStock><p class="empty">No products below their reorder level.</p></ng-template>
+  </article>
+
+  <article class="panel">
+    <div class="panel-title">
+      <h2>Dues this week</h2>
+      <a routerLink="/app/khata">Open khata</a>
+    </div>
+    <ng-container *ngIf="topDues().length; else noDues">
+      <div class="list-row" *ngFor="let farmer of topDues(); trackBy: trackById">
+        <b>{{ farmer.name }}</b>
+        <span>{{ farmer.mobile }}</span>
+        <strong>{{ khataService.farmerBalance(farmer.id) | currency:'INR':'symbol':'1.0-0':'en-IN' }}</strong>
+      </div>
+    </ng-container>
+    <ng-template #noDues><p class="empty">No outstanding customer balances.</p></ng-template>
+  </article>
+</section>
