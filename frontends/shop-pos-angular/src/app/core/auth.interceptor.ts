@@ -5,7 +5,7 @@ import { AuthService } from './auth.service';
 import { TokenStore } from './token-store';
 
 const PUBLIC_PATHS = [
-  '/auth/login', '/auth/register', '/auth/refresh', '/auth/otp/',
+  '/auth/login', '/auth/register', '/auth/signup', '/auth/refresh', '/auth/otp/',
   '/auth/google', '/auth/forgot-password', '/auth/reset-password',
 ];
 
@@ -25,11 +25,10 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
       if (!(error instanceof HttpErrorResponse) || error.status !== 401 || isPublic) {
         return throwError(() => error);
       }
-      if (!tokens.refreshToken) {
+      if (!tokens.refreshToken && !tokens.hasSession) {
         auth.clearSession();
         return throwError(() => error);
       }
-      // Refresh once (shared by parallel requests), then retry with the NEW token.
       return auth.refreshAccessToken().pipe(
         catchError(() => {
           auth.clearSession();

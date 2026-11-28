@@ -437,14 +437,14 @@ export class AuthService {
 
   // ---------------------------------------------------------- tokens/session
   /** One refresh at a time. Parallel callers share the same request. */
+  /** One refresh at a time. Parallel callers share the same request. */
   refreshAccessToken(): Observable<string> {
     if (!this.refreshInFlight$) {
+      const body = this.tokens.refreshToken
+        ? { refresh_token: this.tokens.refreshToken }
+        : {};
       this.refreshInFlight$ = this.raw
-        .post<TokenResponse>(
-          `${this.base}/auth/refresh`,
-          { refresh_token: this.tokens.refreshToken },
-          { withCredentials: true }
-        )
+        .post<TokenResponse>(`${this.base}/auth/refresh`, body, { withCredentials: true })
         .pipe(
           tap(r => this.applyTokens(r)),
           map(r => r.access_token),
@@ -452,17 +452,14 @@ export class AuthService {
           shareReplay(1)
         );
     }
-
     return this.refreshInFlight$;
   }
 
   /** Restores the session after a page reload. Used by guards and app start. */
   async restoreSession(): Promise<boolean> {
-    if (this.authenticated()) {
-      return true;
-    }
+    if (this.authenticated()) return true;
 
-    if (!this.tokens.refreshToken) {
+    if (!this.tokens.refreshToken && !this.tokens.hasSession) {
       return false;
     }
 
