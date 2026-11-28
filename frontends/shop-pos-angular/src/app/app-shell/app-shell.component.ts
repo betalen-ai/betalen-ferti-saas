@@ -26,7 +26,7 @@ const navigation = [
     <div class="app-frame">
       <header class="topbar">
         <button class="menu-button" type="button" (click)="drawerOpen = !drawerOpen" [attr.aria-expanded]="drawerOpen">
-          <i class="bi bi-list"></i><span>Menu</span>
+          <i class="bi bi-list"></i>
         </button>
         <a class="brand" routerLink="/app/dashboard" aria-label="Ferti+ dashboard">
           <span class="brand-mark"><i class="bi bi-flower1"></i></span>

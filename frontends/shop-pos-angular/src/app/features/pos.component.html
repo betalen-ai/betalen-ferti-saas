@@ -4,11 +4,21 @@
     <h1>New sale</h1>
     <p>Add products, choose payment terms, and create a bill.</p>
   </div>
-  <a class="btn secondary-action" routerLink="/app/bills"><i class="bi bi-receipt"></i> Bills</a>
+  <div class="header-actions">
+    <button
+      *ngIf="mobileView === 'catalog'"
+      type="button"
+      class="btn btn-primary primary-action mobile-bill-btn"
+      (click)="mobileView = 'bill'">
+      <i class="bi bi-cart3"></i>
+      Bill ({{ cartItemCount }})
+    </button>
+    <a class="btn secondary-action bills-link" routerLink="/app/bills"><i class="bi bi-receipt"></i> Bills</a>
+  </div>
 </header>
 
 <div class="pos-layout">
-  <section class="panel pos-catalog">
+  <section class="panel pos-catalog" [class.mobile-hidden]="mobileView !== 'catalog'">
     <div class="panel-title">
       <h2>Products</h2>
       <label class="search"><i class="bi bi-search"></i><input [(ngModel)]="productSearch" placeholder="Search products"></label>
@@ -35,8 +45,16 @@
     <p *ngIf="!filteredPackOptions().length" class="empty">No matching products. Add active products in Product Catalog.</p>
   </section>
 
-  <section class="panel bill-builder">
-    <div class="panel-title"><h2>Current bill</h2><span class="bill-number">New bill</span></div>
+  <section class="panel bill-builder" [class.mobile-hidden]="mobileView !== 'bill'">
+    <div class="panel-title">
+      <h2>Current bill</h2>
+      <div class="bill-header-right">
+        <span class="bill-number">New bill</span>
+        <button type="button" class="btn secondary-action mobile-back-btn" (click)="mobileView = 'catalog'">
+          <i class="bi bi-arrow-left"></i> Products
+        </button>
+      </div>
+    </div>
 
     <label>Farmer / customer</label>
     <select class="form-select" [(ngModel)]="farmerId">

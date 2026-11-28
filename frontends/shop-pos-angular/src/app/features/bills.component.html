@@ -4,7 +4,9 @@
     <h1>Bills</h1>
     <p>Review completed sales and outstanding customer credit.</p>
   </div>
-  <a class="btn btn-primary primary-action" routerLink="/app/pos"><i class="bi bi-cart-plus"></i> New Sale</a>
+  <a class="btn btn-primary primary-action add-btn" routerLink="/app/pos">
+    <i class="bi bi-cart-plus"></i> New Sale
+  </a>
 </header>
 
 <section class="panel table-panel">
@@ -19,8 +21,14 @@
     <table>
       <thead>
         <tr>
-          <th>Bill number</th><th>Date</th><th>Farmer</th><th>Payment / status</th>
-          <th>Total</th><th>Paid now</th><th>Balance</th><th>Actions</th>
+          <th>Bill number</th>
+          <th>Date</th>
+          <th>Farmer</th>
+          <th>Payment / status</th>
+          <th>Total</th>
+          <th>Paid now</th>
+          <th>Balance</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -44,5 +52,7 @@
       </tbody>
     </table>
   </div>
-  <ng-template #noBills><p class="empty">No bills yet. Start a sale to create your first bill.</p></ng-template>
+  <ng-template #noBills>
+    <p class="empty">No bills yet. Start a sale to create your first bill.</p>
+  </ng-template>
 </section>

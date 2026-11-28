@@ -28,6 +28,8 @@ export class PosPageComponent {
   readonly settingsService = inject(SettingsService);
   private readonly notice = inject(NoticeService);
 
+  mobileView: 'catalog' | 'bill' = 'catalog';
+
   productSearch = '';
   cart: BillLine[] = [];
   farmerId = '';
@@ -41,6 +43,10 @@ export class PosPageComponent {
   dueDate = '';
   paidNow = 0;
   feedback = '';
+
+  get cartItemCount(): number {
+    return this.cart.reduce((sum, line) => sum + line.quantity, 0);
+  }
 
   get taxExclusive(): boolean {
     return Boolean(this.settingsService.settings()?.values?.['tax_exclusive'] ?? false);
@@ -271,6 +277,7 @@ export class PosPageComponent {
     this.discount = 0;
     this.paidNow = 0;
     this.feedback = '';
+    this.mobileView = 'catalog';
   }
 
   trackByIndex(index: number): number { return index; }
